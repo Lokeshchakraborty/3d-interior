@@ -1,0 +1,24 @@
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Temporary outputs
+outputs/
+*.tmp
+
+# Environment variables
+.env
+.env.local
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+

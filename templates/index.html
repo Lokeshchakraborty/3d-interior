@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Room Redesigner</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="header-badge">AI Interior Design</div>
+      <h1>Room Redesign Studio</h1>
+      <p class="subtitle">Upload a photo of your room, describe your dream aesthetic, and let AI transform it instantly.</p>
+    </header>
+
+    <main class="main-layout">
+      <!-- INPUT SECTION -->
+      <section class="panel input-panel">
+        <form id="redesign-form" method="POST" enctype="multipart/form-data">
+          <!-- 1. Image Upload -->
+          <div class="form-group">
+            <label for="room-image" class="field-label">
+              <span>1. Upload Room Photo</span>
+              <span class="required-badge">Required</span>
+            </label>
+            
+            <div class="drop-zone" id="drop-zone">
+              <input type="file" id="room-image" name="room_image" accept="image/*" required class="visually-hidden">
+              <div class="drop-zone-content" id="drop-zone-prompt">
+                <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <p class="drop-text"><strong>Click to browse</strong> or drag & drop room photo</p>
+                <p class="drop-hint">Supports JPG, PNG, WEBP, AVIF</p>
+              </div>
+              <div class="preview-container hidden" id="preview-container">
+                <img id="input-preview" alt="Selected room preview" class="preview-img">
+                <button type="button" id="change-image-btn" class="change-img-btn">Change Photo</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Style Prompt -->
+          <div class="form-group">
+            <label for="prompt" class="field-label">
+              <span>2. Style Prompt</span>
+              <span class="required-badge">Required</span>
+            </label>
+            <textarea 
+              id="prompt" 
+              name="prompt" 
+              rows="3" 
+              required 
+              placeholder="e.g. modern_interior, luxury Scandinavian living room with beige linen couch, white oak floor, warm sunlight"
+            >modern_interior, luxury Scandinavian living room with beige linen couch, white oak floor, warm sunlight</textarea>
+            
+            <div class="preset-section">
+              <span class="preset-label">Quick Styles (LoRA Trigger: <code>modern_interior</code>):</span>
+              <div class="preset-chips">
+                <button type="button" class="preset-chip" data-prompt="modern_interior, luxury Scandinavian living room, light wood furniture, minimalist decor, 8k architectural photo">Scandinavian</button>
+                <button type="button" class="preset-chip" data-prompt="modern_interior, luxury Japandi living room, clean aesthetics, beige linen sofa, warm ambient light, 8k">Japandi</button>
+                <button type="button" class="preset-chip" data-prompt="modern_interior, luxury modern penthouse living room, marble accent wall, velvet sectional sofa, ambient warm lighting, 8k">Modern Luxury</button>
+                <button type="button" class="preset-chip" data-prompt="modern_interior, cozy bohemian living room, textured woven rugs, rattan furniture, indoor plants, warm earthy tones, 8k">Bohemian</button>
+                <button type="button" class="preset-chip" data-prompt="modern_interior, urban industrial loft, exposed brick wall, matte black steel details, distressed leather couch, 8k">Industrial</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Submit Button -->
+          <button type="submit" id="submit-btn" class="primary-btn">
+            <span class="btn-spinner hidden" id="btn-spinner" aria-hidden="true"></span>
+            <span id="btn-text">Redesign Room</span>
+          </button>
+
+          <!-- Status Message -->
+          <div id="status-message" class="status-box hidden" role="status" aria-live="polite"></div>
+        </form>
+      </section>
+
+      <!-- OUTPUT SECTION -->
+      <section class="panel output-panel">
+        <div class="panel-header">
+          <h2>Redesigned Result</h2>
+          <span class="status-badge" id="output-badge">Ready</span>
+        </div>
+
+        <div class="output-box" id="output-box">
+          <!-- Placeholder State -->
+          <div class="output-placeholder" id="output-placeholder">
+            <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            <p class="placeholder-title">No image generated yet</p>
+            <p class="placeholder-subtitle">Upload a photo and hit "Redesign Room" to view the transformation here.</p>
+          </div>
+
+          <!-- Loading State -->
+          <div class="output-loading hidden" id="output-loading">
+            <div class="large-spinner" aria-hidden="true"></div>
+            <p class="loading-title">Generating your new interior...</p>
+            <p class="loading-subtitle">ZeroGPU is rendering the photorealistic design (~15–20 seconds)</p>
+          </div>
+
+          <!-- Result State -->
+          <div class="output-result hidden" id="output-result">
+            <div class="image-wrapper">
+              <img id="output-image" alt="Redesigned room result" class="output-img">
+            </div>
+            <div class="output-actions">
+              <a id="download-btn" class="action-btn download-btn" download="redesigned_room.jpg">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Download Image
+              </a>
+              <button type="button" id="fullscreen-btn" class="action-btn secondary-action-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                  <polyline points="15 3 21 3 21 9"/>
+                  <polyline points="9 21 3 21 3 15"/>
+                  <line x1="21" y1="3" x2="14" y2="10"/>
+                  <line x1="3" y1="21" x2="10" y2="14"/>
+                </svg>
+                View Fullscreen
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
