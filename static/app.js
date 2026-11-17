@@ -386,6 +386,19 @@ document.addEventListener('DOMContentLoaded', () => {
             <span>Verified Fit: ${dimStr}</span>
           </div>
 
+          <div class="product-attributes">
+            <span class="attr-chip chip-shape" title="Product Geometric Shape">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+              </svg>
+              ${prod.shape || 'Geometric'}
+            </span>
+            <span class="attr-chip chip-color" title="Product Color Palette">
+              <span class="color-swatch-dot"></span>
+              ${prod.color || 'Neutral'}
+            </span>
+          </div>
+
           <div class="product-materials">
             ${(prod.materials || []).slice(0, 2).map(m => `<span class="mat-chip">${m}</span>`).join('')}
           </div>
@@ -440,6 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <div class="pin-tooltip">
           <strong>${prod.store} - ${prod.title.slice(0, 24)}...</strong>
+          <span style="color:#a5f3fc;font-size:0.7rem;">${prod.shape} · ${prod.color}</span>
           <span>₹${prod.price_inr.toLocaleString('en-IN')} · ${prod.dimensions.width_in}"W × ${prod.dimensions.depth_in}"D</span>
         </div>
       `;

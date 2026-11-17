@@ -1665,3 +1665,44 @@ textarea:focus-visible {
   border-color: rgba(16, 185, 129, 0.4) !important;
   box-shadow: 0 0 10px rgba(16, 185, 129, 0.2) !important;
 }
+
+
+/* Product Shape & Color Attribute Chips */
+.product-attributes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.55rem;
+}
+
+.attr-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.25rem 0.55rem;
+  border-radius: 5px;
+  line-height: 1.2;
+}
+
+.chip-shape {
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+.chip-color {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.color-swatch-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fbbf24;
+  box-shadow: 0 0 6px rgba(251, 191, 36, 0.6);
+  flex-shrink: 0;
+}

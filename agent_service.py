@@ -46,12 +46,29 @@ class AgentService:
         """
         trigger = "modern_interior"
         
-        # Extract visual descriptions of all selected products
+        # Extract visual descriptions of all selected products, guaranteeing explicit shape and color
         product_descriptions = []
         for p in curated_products:
-            desc = p.get("visual_description")
+            desc = p.get("visual_description", "")
+            shape = p.get("shape", "")
+            color = p.get("color", "")
             if desc:
+                # Check if shape keywords are already in desc
+                shape_words = [w for w in re.findall(r'\b[a-zA-Z-]+\b', shape.lower()) if len(w) > 3]
+                has_shape = any(w in desc.lower() for w in shape_words) if shape_words else False
+
+                # Check if color keywords are already in desc
+                color_words = [w for w in re.findall(r'\b[a-zA-Z-]+\b', color.lower()) if len(w) > 3]
+                has_color = any(w in desc.lower() for w in color_words) if color_words else False
+
+                if not has_shape and shape:
+                    desc = f"{shape}-shaped {desc}"
+                if not has_color and color:
+                    desc = f"{desc} in {color}"
                 product_descriptions.append(desc)
+            elif shape or color:
+                cat = p.get("category", "furniture")
+                product_descriptions.append(f"{shape} {color} {cat}")
 
         style_title = style.replace("_", " ").title()
         room_type = spatial_plan.get("room_type", "living room").replace("_", " ")
