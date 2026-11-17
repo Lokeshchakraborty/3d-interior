@@ -1875,3 +1875,213 @@ textarea:focus-visible {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.4; transform: scale(0.85); }
 }
+
+/* ============================================================
+   Interactive Precision Stager (100% Zero-Hallucination)
+   ============================================================ */
+.interactive-stage-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.stage-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.85rem;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: var(--radius-sm);
+  backdrop-filter: blur(8px);
+}
+
+.stage-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.stage-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.stage-hint {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.stage-btn-sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.stage-btn-sm:hover {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+.stage-canvas-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  min-height: 400px;
+  max-height: 700px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: #000;
+  border: 1px solid var(--border);
+  user-select: none;
+}
+
+.stage-bg-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+
+.stage-items-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.staged-item {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  cursor: grab;
+  pointer-events: auto;
+  transition: box-shadow 0.2s ease, transform 0.05s linear;
+  touch-action: none;
+}
+
+.staged-item:active,
+.staged-item.dragging {
+  cursor: grabbing;
+  filter: brightness(1.05);
+}
+
+.staged-shadow {
+  position: absolute;
+  bottom: 0%;
+  left: 5%;
+  width: 90%;
+  height: 22%;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.65) 0%, rgba(0, 0, 0, 0) 70%);
+  border-radius: 50%;
+  filter: blur(5px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.staged-img {
+  position: relative;
+  width: 100%;
+  height: auto;
+  display: block;
+  z-index: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.35));
+}
+
+.staged-badge {
+  position: absolute;
+  bottom: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #f8fafc;
+  backdrop-filter: blur(4px);
+  opacity: 0.85;
+  transition: opacity 0.2s;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.staged-item:hover .staged-badge,
+.staged-item.dragging .staged-badge {
+  opacity: 1;
+  border-color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+}
+
+.staged-store {
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+.staged-dim {
+  color: #94a3b8;
+}
+
+.staged-resizer {
+  position: absolute;
+  top: -12px;
+  right: -8px;
+  display: flex;
+  gap: 2px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 12px;
+  padding: 1px 3px;
+  z-index: 4;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.staged-item:hover .staged-resizer {
+  opacity: 1;
+}
+
+.resize-btn {
+  background: none;
+  border: none;
+  color: #38bdf8;
+  font-size: 0.85rem;
+  font-weight: 700;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.15s;
+}
+
+.resize-btn:hover {
+  background: rgba(56, 189, 248, 0.2);
+}

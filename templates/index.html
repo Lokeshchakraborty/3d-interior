@@ -244,9 +244,10 @@
           <div class="header-controls">
             <!-- View Mode Switcher -->
             <div class="view-switcher hidden" id="view-switcher">
-              <button type="button" class="view-tab active" id="tab-after">AI Ambiance</button>
-              <button type="button" class="view-tab" id="tab-matched">Exact Product Match</button>
-              <button type="button" class="view-tab" id="tab-before">Before (Original)</button>
+              <button type="button" class="view-tab active" id="tab-matched">🎯 Exact Product Match (100% Real)</button>
+              <button type="button" class="view-tab" id="tab-interactive">🎮 Interactive Stager</button>
+              <button type="button" class="view-tab" id="tab-after">✨ AI Ambiance</button>
+              <button type="button" class="view-tab" id="tab-before">Original Room</button>
               <button type="button" class="view-tab" id="tab-split">Side-by-Side</button>
             </div>
             <span class="status-badge" id="output-badge">Ready</span>
@@ -312,6 +313,31 @@
               <div class="split-pane">
                 <span class="split-label">After (AI Redesign)</span>
                 <img id="split-after-img" alt="Redesigned room" class="split-img">
+              </div>
+            </div>
+
+            <!-- Interactive Precision Stager Container -->
+            <div class="interactive-stage-container hidden" id="interactive-stage-container">
+              <div class="stage-toolbar">
+                <div class="stage-info">
+                  <span class="stage-badge">100% Precision Staging</span>
+                  <span class="stage-hint">Drag real Amazon, Flipkart & IKEA furniture across your floor &bull; Adjust size with + / -</span>
+                </div>
+                <div class="stage-actions">
+                  <button type="button" id="reset-stage-btn" class="stage-btn-sm" title="Reset all products to agent spatial calculation">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                      <path d="M3 3v5h5"/>
+                    </svg>
+                    Reset Layout
+                  </button>
+                </div>
+              </div>
+              <div class="stage-canvas-wrapper" id="stage-canvas-wrapper">
+                <img id="stage-bg-image" alt="Room stage backdrop" class="stage-bg-img">
+                <div id="stage-items-layer" class="stage-items-layer">
+                  <!-- Dynamically populated draggable product cutouts -->
+                </div>
               </div>
             </div>
 

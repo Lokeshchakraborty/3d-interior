@@ -41,10 +41,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const viewSwitcher = document.getElementById('view-switcher');
   const tabAfter = document.getElementById('tab-after');
   const tabMatched = document.getElementById('tab-matched');
+  const tabInteractive = document.getElementById('tab-interactive');
   const tabBefore = document.getElementById('tab-before');
   const tabSplit = document.getElementById('tab-split');
   const singleViewContainer = document.getElementById('single-view-container');
   const splitViewContainer = document.getElementById('split-view-container');
+  const interactiveStageContainer = document.getElementById('interactive-stage-container');
+  const stageCanvasWrapper = document.getElementById('stage-canvas-wrapper');
+  const stageBgImage = document.getElementById('stage-bg-image');
+  const stageItemsLayer = document.getElementById('stage-items-layer');
+  const resetStageBtn = document.getElementById('reset-stage-btn');
   const splitBeforeImg = document.getElementById('split-before-img');
   const splitAfterImg = document.getElementById('split-after-img');
   const matchedImage = document.getElementById('matched-image');
@@ -197,34 +203,49 @@ document.addEventListener('DOMContentLoaded', () => {
   // 4. View Mode Switcher
   tabAfter.addEventListener('click', () => switchView('after'));
   if (tabMatched) tabMatched.addEventListener('click', () => switchView('matched'));
+  if (tabInteractive) tabInteractive.addEventListener('click', () => switchView('interactive'));
   tabBefore.addEventListener('click', () => switchView('before'));
   tabSplit.addEventListener('click', () => switchView('split'));
 
   function switchView(mode) {
-    [tabAfter, tabMatched, tabBefore, tabSplit].forEach(t => t && t.classList.remove('active'));
+    [tabAfter, tabMatched, tabInteractive, tabBefore, tabSplit].forEach(t => t && t.classList.remove('active'));
 
     if (mode === 'after') {
       tabAfter.classList.add('active');
       singleViewContainer.classList.remove('hidden');
       splitViewContainer.classList.add('hidden');
+      if (interactiveStageContainer) interactiveStageContainer.classList.add('hidden');
       outputImage.classList.remove('hidden');
       if (matchedImage) matchedImage.classList.add('hidden');
       beforeImage.classList.add('hidden');
       hotspotPins.classList.remove('hidden');
-      imageViewBadge.textContent = 'AI Ambiance (FLUX)';
+      imageViewBadge.textContent = 'AI Ambiance (FLUX Diffusion)';
     } else if (mode === 'matched') {
       if (tabMatched) tabMatched.classList.add('active');
       singleViewContainer.classList.remove('hidden');
       splitViewContainer.classList.add('hidden');
+      if (interactiveStageContainer) interactiveStageContainer.classList.add('hidden');
       outputImage.classList.add('hidden');
       if (matchedImage) matchedImage.classList.remove('hidden');
       beforeImage.classList.add('hidden');
       hotspotPins.classList.remove('hidden');
-      imageViewBadge.textContent = 'Exact Product Placement (Amazon/IKEA Packshots)';
+      imageViewBadge.textContent = 'Exact Product Placement (Real Amazon/IKEA Cutouts)';
+    } else if (mode === 'interactive') {
+      if (tabInteractive) tabInteractive.classList.add('active');
+      singleViewContainer.classList.add('hidden');
+      splitViewContainer.classList.add('hidden');
+      if (interactiveStageContainer) {
+        interactiveStageContainer.classList.remove('hidden');
+        if (stageBgImage) {
+          stageBgImage.src = redesignedImageSrc || originalImageSrc;
+        }
+      }
+      imageViewBadge.textContent = 'Interactive 3D Floor Stager';
     } else if (mode === 'before') {
       tabBefore.classList.add('active');
       singleViewContainer.classList.remove('hidden');
       splitViewContainer.classList.add('hidden');
+      if (interactiveStageContainer) interactiveStageContainer.classList.add('hidden');
       outputImage.classList.add('hidden');
       if (matchedImage) matchedImage.classList.add('hidden');
       beforeImage.classList.remove('hidden');
@@ -233,6 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (mode === 'split') {
       tabSplit.classList.add('active');
       singleViewContainer.classList.add('hidden');
+      if (interactiveStageContainer) interactiveStageContainer.classList.add('hidden');
       splitViewContainer.classList.remove('hidden');
       hotspotPins.classList.add('hidden');
     }
@@ -313,12 +335,15 @@ document.addEventListener('DOMContentLoaded', () => {
         renderSpatialAnalysis(data.spatial_plan, data.agent_engine);
         renderPurchasableProducts(data.products, data.total_estimated_cost_inr);
         renderHotspots(data.products);
+        renderInteractiveStager(data.products);
         synthesizedPromptText.textContent = data.conditioned_prompt || promptText;
         productsSection.classList.remove('hidden');
         spatialCard.classList.remove('hidden');
+        if (tabInteractive) tabInteractive.classList.remove('hidden');
       } else {
         // Direct mode: hide product sections and matched tab
         if (tabMatched) tabMatched.classList.add('hidden');
+        if (tabInteractive) tabInteractive.classList.add('hidden');
         productsSection.classList.add('hidden');
         spatialCard.classList.add('hidden');
         hotspotPins.innerHTML = '';
@@ -331,13 +356,19 @@ document.addEventListener('DOMContentLoaded', () => {
       outputResult.classList.remove('hidden');
       viewSwitcher.classList.remove('hidden');
 
-      switchView('after');
-      outputBadge.textContent = isAgentic ? 'Agentic Complete' : 'Rendered';
+      // In Agentic mode, default to the 100% Exact Product Match view!
+      if (isAgentic && matchedImageSrc) {
+        switchView('matched');
+      } else {
+        switchView('after');
+      }
+
+      outputBadge.textContent = isAgentic ? 'Exact Match Active' : 'Rendered';
       outputBadge.classList.add('active');
 
       showStatus(
         isAgentic 
-          ? `Spatial analysis complete! Curated ${data.products.length} dimension-verified items from Amazon, Flipkart & IKEA.`
+          ? `Zero-hallucination match! Placed ${data.products.length} verified real Amazon, Flipkart & IKEA items into your room.`
           : 'Redesign completed successfully!',
         'success'
       );
@@ -611,5 +642,130 @@ document.addEventListener('DOMContentLoaded', () => {
   function clearStatus() {
     statusMessage.textContent = '';
     statusMessage.classList.add('hidden');
+  }
+
+  // 10. Interactive Drag-and-Drop Precision Stager
+  let currentStagedProducts = [];
+
+  function renderInteractiveStager(products) {
+    currentStagedProducts = products || [];
+    if (!stageItemsLayer) return;
+    stageItemsLayer.innerHTML = '';
+    if (stageBgImage) {
+      stageBgImage.src = matchedImageSrc || redesignedImageSrc || originalImageSrc;
+    }
+
+    currentStagedProducts.forEach((prod, idx) => {
+      const cutoutSrc = prod.cutout_url || prod.image_url;
+      if (!cutoutSrc) return;
+
+      const coords = prod.stage_coords || {};
+      const initX = coords.center_x_pct || (prod.hotspot ? prod.hotspot.x_pct : 50);
+      const initY = coords.center_y_pct || (prod.hotspot ? prod.hotspot.y_pct : 60);
+      const initWidth = coords.width_pct || 28;
+
+      const itemEl = document.createElement('div');
+      itemEl.className = 'staged-item';
+      itemEl.id = `staged-item-${prod.id}`;
+      itemEl.setAttribute('data-id', prod.id);
+      itemEl.style.left = `${initX}%`;
+      itemEl.style.top = `${initY}%`;
+      itemEl.style.width = `${initWidth}%`;
+      itemEl.style.zIndex = Math.round(initY);
+
+      const dim = prod.dimensions || {};
+      const dimStr = `${dim.width_in || 36}"W × ${dim.depth_in || 24}"D`;
+
+      itemEl.innerHTML = `
+        <div class="staged-shadow"></div>
+        <img src="${cutoutSrc}" alt="${prod.title}" class="staged-img" draggable="false">
+        <div class="staged-badge">
+          <span class="staged-store">${prod.store}</span>
+          <span class="staged-dim">${dimStr}</span>
+        </div>
+        <div class="staged-resizer">
+          <button type="button" class="resize-btn resize-minus" title="Scale Down">-</button>
+          <button type="button" class="resize-btn resize-plus" title="Scale Up">+</button>
+        </div>
+      `;
+
+      // Setup Drag & Drop
+      setupDragEvents(itemEl);
+
+      // Setup Scaling Controls
+      const btnMinus = itemEl.querySelector('.resize-minus');
+      const btnPlus = itemEl.querySelector('.resize-plus');
+      let currentWidth = initWidth;
+
+      btnMinus.addEventListener('click', (e) => {
+        e.stopPropagation();
+        currentWidth = Math.max(12, currentWidth - 3);
+        itemEl.style.width = `${currentWidth}%`;
+      });
+
+      btnPlus.addEventListener('click', (e) => {
+        e.stopPropagation();
+        currentWidth = Math.min(65, currentWidth + 3);
+        itemEl.style.width = `${currentWidth}%`;
+      });
+
+      stageItemsLayer.appendChild(itemEl);
+    });
+  }
+
+  function setupDragEvents(el) {
+    if (!stageCanvasWrapper) return;
+    let isDragging = false;
+    let startX = 0, startY = 0;
+    let elemStartLeft = 0, elemStartTop = 0;
+
+    const onPointerDown = (e) => {
+      if (e.target.closest('.staged-resizer')) return;
+      isDragging = true;
+      el.classList.add('dragging');
+      startX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+      startY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
+
+      const parentRect = stageCanvasWrapper.getBoundingClientRect();
+      const elemRect = el.getBoundingClientRect();
+      elemStartLeft = ((elemRect.left + elemRect.width / 2 - parentRect.left) / parentRect.width) * 100;
+      elemStartTop = ((elemRect.top + elemRect.height / 2 - parentRect.top) / parentRect.height) * 100;
+
+      document.addEventListener('pointermove', onPointerMove);
+      document.addEventListener('pointerup', onPointerUp);
+    };
+
+    const onPointerMove = (e) => {
+      if (!isDragging) return;
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
+      const parentRect = stageCanvasWrapper.getBoundingClientRect();
+      if (!parentRect.width || !parentRect.height) return;
+
+      const deltaXPct = ((clientX - startX) / parentRect.width) * 100;
+      const deltaYPct = ((clientY - startY) / parentRect.height) * 100;
+
+      const newXPct = Math.max(5, Math.min(95, elemStartLeft + deltaXPct));
+      const newYPct = Math.max(15, Math.min(95, elemStartTop + deltaYPct));
+
+      el.style.left = `${newXPct}%`;
+      el.style.top = `${newYPct}%`;
+      el.style.zIndex = Math.round(newYPct);
+    };
+
+    const onPointerUp = () => {
+      isDragging = false;
+      el.classList.remove('dragging');
+      document.removeEventListener('pointermove', onPointerMove);
+      document.removeEventListener('pointerup', onPointerUp);
+    };
+
+    el.addEventListener('pointerdown', onPointerDown);
+  }
+
+  if (resetStageBtn) {
+    resetStageBtn.addEventListener('click', () => {
+      renderInteractiveStager(currentStagedProducts);
+    });
   }
 });

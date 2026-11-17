@@ -308,3 +308,4 @@ class LiveCrawler:
 
 # Singleton instance
 live_crawler = LiveCrawler()
+
