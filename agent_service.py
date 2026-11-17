@@ -2,6 +2,7 @@
 Agentic Interior Redesign Orchestrator
 Coordinates spatial reasoning, catalog query, prompt conditioning, ZeroGPU visual synthesis,
 and interactive product hotspot mapping.
+Grounds visual generation in user-specified Length x Width x Height to prevent perspective hallucinations.
 """
 
 import os
@@ -40,10 +41,9 @@ class AgentService:
         spatial_plan: Dict[str, Any]
     ) -> str:
         """
-        Synthesize a photorealistic visual prompt for the FLUX LoRA model that precisely describes
-        the real products selected from the catalog so the generated image matches the purchasable items.
+        Synthesize an architectural prompt for the FLUX LoRA model that precisely describes
+        the real products and exact room dimensions ($L \times W \times H$) to prevent scaling hallucinations.
         """
-        # Always maintain the required FLUX LoRA trigger word
         trigger = "modern_interior"
         
         # Extract visual descriptions of all selected products
@@ -53,20 +53,29 @@ class AgentService:
             if desc:
                 product_descriptions.append(desc)
 
-        # Style descriptor
         style_title = style.replace("_", " ").title()
         room_type = spatial_plan.get("room_type", "living room").replace("_", " ")
+
+        dims = spatial_plan.get("room_dimensions_ft", {})
+        w = dims.get("width_ft")
+        l = dims.get("length_ft")
+        h = dims.get("ceiling_height_ft")
+
+        dim_scale_str = ""
+        if w and l and h:
+            dim_scale_str = f"accurately proportioned for a {l}ft length by {w}ft width space with {h}ft high ceilings and 32-inch circulation walkways, "
+        elif w and l:
+            dim_scale_str = f"accurately proportioned for a {l}ft by {w}ft floor plan, "
 
         if product_descriptions:
             items_text = ", ".join(product_descriptions)
             prompt = (
-                f"{trigger}, {style_title} {room_type} designed with architectural scale and harmony. "
+                f"{trigger}, {style_title} {room_type} {dim_scale_str}designed with architectural scale and harmony. "
                 f"Featuring {items_text}. "
                 f"Natural daylight flowing from {spatial_plan.get('natural_light_source', 'window')}, "
-                f"photorealistic interior photography, architectural digest quality, high-end textures, 8k resolution"
+                f"photorealistic interior photography, architectural digest quality, correct physical scale and perspective, realistic furniture proportions, high-end textures, 8k resolution"
             )
         else:
-            # Fallback to base prompt with trigger preserved
             clean_base = base_user_prompt.strip()
             if not clean_base.startswith(trigger):
                 prompt = f"{trigger}, {clean_base}"
@@ -80,13 +89,16 @@ class AgentService:
         image_bytes: bytes,
         user_prompt: str = "",
         preferred_style: Optional[str] = None,
-        max_budget_inr: Optional[int] = None
+        max_budget_inr: Optional[int] = None,
+        room_length: Optional[float] = None,
+        room_width: Optional[float] = None,
+        room_height: Optional[float] = None
     ) -> Dict[str, Any]:
         """
-        Executes the end-to-end Agentic Redesign Pipeline:
-        1. Spatial Perception (Room dimensions, zones, clearances)
-        2. Catalog Selection (Real products with dimensions fitting the space)
-        3. Prompt Synthesis (Conditioned prompt describing real products)
+        Executes the end-to-end Agentic Redesign Pipeline with Ground-Truth Dimensional Guidance:
+        1. Spatial Perception (anchored by user length, width, height)
+        2. Catalog Selection (real products sized specifically for the user's room bounds)
+        3. Dimension-Conditioned Prompt Synthesis (eliminates hallucinations)
         4. ZeroGPU Visual Synthesis (ZeroGPU FLUX model generation)
         5. Hotspot & Bill of Materials Alignment (Interactive metadata)
         """
@@ -94,7 +106,6 @@ class AgentService:
         zerogpu_result = None
 
         try:
-            # Save uploaded image to temp file for spatial analysis and ZeroGPU
             temp_file = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
             temp_input_path = temp_file.name
             temp_file.close()
@@ -102,10 +113,23 @@ class AgentService:
             with open(temp_input_path, "wb") as f:
                 f.write(image_bytes)
 
+            # Build user dimensions payload
+            user_dimensions = {}
+            if room_length and room_length > 0:
+                user_dimensions["length_ft"] = float(room_length)
+            if room_width and room_width > 0:
+                user_dimensions["width_ft"] = float(room_width)
+            if room_height and room_height > 0:
+                user_dimensions["height_ft"] = float(room_height)
+
             # ----------------------------------------------------
-            # Step 1: Spatial Perception Tool
+            # Step 1: Spatial Perception Tool (Anchored by Dimensions)
             # ----------------------------------------------------
-            spatial_plan = spatial_tool.analyze_room(temp_input_path, user_prompt)
+            spatial_plan = spatial_tool.analyze_room(
+                image_path=temp_input_path,
+                user_hint=user_prompt,
+                user_dimensions=user_dimensions
+            )
             spatial_zones = spatial_plan.get("zones", {})
 
             # ----------------------------------------------------
@@ -118,7 +142,6 @@ class AgentService:
                 max_budget_inr=max_budget_inr
             )
 
-            # Map spatial hotspot coordinates onto each curated product
             category_to_zone_key = {
                 "sofa": "seating_zone",
                 "coffee_table": "table_zone",
@@ -135,7 +158,6 @@ class AgentService:
                 zone_key = category_to_zone_key.get(cat, "seating_zone")
                 zone_info = spatial_zones.get(zone_key, {})
 
-                # Enrich product with 2D perspective normalized hotspot
                 p_copy = dict(p)
                 p_copy["hotspot"] = {
                     "x_pct": zone_info.get("hotspot_x_pct", 50.0),
@@ -165,7 +187,7 @@ class AgentService:
             from gradio_client import handle_file
             gradio_client = self.gradio_client_getter()
 
-            print(f"[Agent] Submitting synthesized prompt to ZeroGPU...")
+            print(f"[Agent] Submitting dimension-grounded prompt to ZeroGPU...")
             print(f"[Agent] Prompt: {conditioned_prompt}")
 
             zerogpu_result = gradio_client.predict(
@@ -174,7 +196,6 @@ class AgentService:
                 api_name="/redesign"
             )
 
-            # Convert result into Base64 data URL
             buffer = io.BytesIO()
             with Image.open(zerogpu_result) as img:
                 img.convert("RGB").save(buffer, format="JPEG", quality=95)
@@ -183,7 +204,7 @@ class AgentService:
             image_data_url = f"data:image/jpeg;base64,{base64_data}"
 
             # ----------------------------------------------------
-            # Step 5: Bill of Materials & Final Payload
+            # Step 5: Final Response Payload
             # ----------------------------------------------------
             return {
                 "success": True,
@@ -194,7 +215,9 @@ class AgentService:
                 "products": products_with_hotspots,
                 "total_estimated_cost_inr": total_cost_inr,
                 "total_products_count": len(products_with_hotspots),
-                "agent_engine": spatial_plan.get("analysis_engine", "gemini-3.8-flash")
+                "agent_engine": spatial_plan.get("analysis_engine", "gemini-3.8-flash"),
+                "dimension_source": spatial_plan.get("dimension_source", "aspect_ratio_estimation"),
+                "is_ground_truth_dimensions": spatial_plan.get("is_ground_truth_dimensions", False)
             }
 
         finally:

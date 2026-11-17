@@ -21,7 +21,10 @@ def redesign_room(
     prompt: str = "modern_interior, luxury Scandinavian living room with beige linen couch, white oak floor, warm sunlight",
     output_path: str = "flux_redesigned_room.jpg",
     agentic: bool = True,
-    style: str = "scandinavian"
+    style: str = "scandinavian",
+    length_ft: float = 16.0,
+    width_ft: float = 14.0,
+    height_ft: float = 9.5
 ):
     token = get_token()
 
@@ -30,8 +33,9 @@ def redesign_room(
         from catalog_service import catalog_service
         from agent_service import AgentService
 
-        print(f"[Agentic Mode] Analyzing spatial dimensions of '{image_path}'...")
-        spatial_plan = spatial_tool.analyze_room(image_path, prompt)
+        user_dimensions = {"length_ft": length_ft, "width_ft": width_ft, "height_ft": height_ft}
+        print(f"[Agentic Mode] Analyzing spatial dimensions for L={length_ft}ft, W={width_ft}ft, H={height_ft}ft...")
+        spatial_plan = spatial_tool.analyze_room(image_path, prompt, user_dimensions=user_dimensions)
         print(f"-> Room Dimensions: {spatial_plan.get('room_dimensions_ft')} ({spatial_plan.get('floor_area_sqft')} sq.ft)")
 
         print(f"[Agentic Mode] Curating B2C products from Amazon, Flipkart, IKEA...")
@@ -65,6 +69,9 @@ if __name__ == "__main__":
     parser.add_argument("--image", default="my_room.jpg", help="Path to room image")
     parser.add_argument("--prompt", default="modern_interior, luxury Scandinavian living room", help="Prompt")
     parser.add_argument("--style", default="scandinavian", help="Style: scandinavian, japandi, modern_luxury, bohemian, industrial")
+    parser.add_argument("--length", type=float, default=16.0, help="Room length in feet")
+    parser.add_argument("--width", type=float, default=14.0, help="Room width in feet")
+    parser.add_argument("--height", type=float, default=9.5, help="Room ceiling height in feet")
     parser.add_argument("--direct", action="store_true", help="Run direct diffusion instead of agentic mode")
     parser.add_argument("--output", default="flux_redesigned_room.jpg", help="Output path")
     args = parser.parse_args()
@@ -74,5 +81,8 @@ if __name__ == "__main__":
         prompt=args.prompt,
         output_path=args.output,
         agentic=not args.direct,
-        style=args.style
+        style=args.style,
+        length_ft=args.length,
+        width_ft=args.width,
+        height_ft=args.height
     )

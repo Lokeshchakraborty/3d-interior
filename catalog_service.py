@@ -540,3 +540,4 @@ class CatalogService:
 
 # Singleton instance
 catalog_service = CatalogService()
+

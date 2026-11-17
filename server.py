@@ -87,11 +87,14 @@ async def redesign_agentic(
     room_image: UploadFile = File(...),
     prompt: str = Form("modern_interior, luxury Scandinavian living room with beige linen couch"),
     style: Optional[str] = Form(None),
-    budget: Optional[int] = Form(None)
+    budget: Optional[int] = Form(None),
+    room_length: Optional[float] = Form(None),
+    room_width: Optional[float] = Form(None),
+    room_height: Optional[float] = Form(None)
 ):
     """
-    Agentic redesign endpoint:
-    1. Runs spatial perception & room dimension calculation.
+    Agentic redesign endpoint with Ground-Truth Dimensional Calibration:
+    1. Runs spatial perception & room dimension calculation using user Length, Width, Height.
     2. Curates real dimension-verified products from Amazon/Flipkart/IKEA.
     3. Synthesizes an architectural prompt describing those exact products.
     4. Calls ZeroGPU visual generation API.
@@ -105,12 +108,15 @@ async def redesign_agentic(
         if not image_bytes:
             return JSONResponse(status_code=400, content={"success": False, "error": "Image file is empty"})
 
-        print(f"[Agentic Redesign] Initiating pipeline for: {room_image.filename}")
+        print(f"[Agentic Redesign] Initiating pipeline for: {room_image.filename} (L={room_length}, W={room_width}, H={room_height})")
         result = agent_service.run_redesign_pipeline(
             image_bytes=image_bytes,
             user_prompt=prompt,
             preferred_style=style,
-            max_budget_inr=budget
+            max_budget_inr=budget,
+            room_length=room_length,
+            room_width=room_width,
+            room_height=room_height
         )
         return JSONResponse(content=result)
 

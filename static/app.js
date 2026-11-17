@@ -18,6 +18,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const modeAgenticLabel = document.getElementById('mode-agentic-label');
   const modeDirectLabel = document.getElementById('mode-direct-label');
 
+  // Room Dimension Inputs & Presets
+  const roomLengthInput = document.getElementById('room-length');
+  const roomWidthInput = document.getElementById('room-width');
+  const roomHeightInput = document.getElementById('room-height');
+  const dimPresetBtns = document.querySelectorAll('.dim-preset-btn');
+
   // Output Views & Placeholders
   const outputPlaceholder = document.getElementById('output-placeholder');
   const outputLoading = document.getElementById('output-loading');
@@ -171,6 +177,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // 3b. Room Dimension Presets
+  dimPresetBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      dimPresetBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      if (roomLengthInput) roomLengthInput.value = btn.getAttribute('data-length');
+      if (roomWidthInput) roomWidthInput.value = btn.getAttribute('data-width');
+      if (roomHeightInput) roomHeightInput.value = btn.getAttribute('data-height');
+    });
+  });
+
   // 4. View Mode Switcher
   tabAfter.addEventListener('click', () => switchView('after'));
   tabBefore.addEventListener('click', () => switchView('before'));
@@ -232,6 +250,15 @@ document.addEventListener('DOMContentLoaded', () => {
     formData.append('prompt', promptText);
     if (isAgentic) {
       formData.append('style', selectedStyle);
+      if (roomLengthInput && roomLengthInput.value) {
+        formData.append('room_length', roomLengthInput.value);
+      }
+      if (roomWidthInput && roomWidthInput.value) {
+        formData.append('room_width', roomWidthInput.value);
+      }
+      if (roomHeightInput && roomHeightInput.value) {
+        formData.append('room_height', roomHeightInput.value);
+      }
     }
 
     try {
@@ -304,15 +331,24 @@ document.addEventListener('DOMContentLoaded', () => {
   // 6. Render Spatial Analysis Card
   function renderSpatialAnalysis(plan, engine) {
     if (!plan) return;
-    spatialEngineBadge.textContent = engine === 'gemini-3.8-flash' ? 'Engine: Gemini 3.8 Flash Vision' : 'Engine: Architectural Spatial Heuristics';
+    const isGroundTruth = plan.is_ground_truth_dimensions || false;
+    const engineLabel = engine === 'gemini-3.8-flash' ? 'Gemini 3.8 Flash' : 'Spatial Heuristics';
+    const sourceLabel = isGroundTruth ? 'User Ground Truth' : 'AI Estimated';
+
+    spatialEngineBadge.textContent = `${engineLabel} · ${sourceLabel}`;
+    if (isGroundTruth) {
+      spatialEngineBadge.classList.add('badge-ground-truth');
+    } else {
+      spatialEngineBadge.classList.remove('badge-ground-truth');
+    }
     
     const dims = plan.room_dimensions_ft || {};
     const w = dims.width_ft || 14;
     const l = dims.length_ft || 16;
     const sqft = plan.floor_area_sqft || Math.round(w * l);
-    metricDim.textContent = `${w}' × ${l}' (${sqft} sq.ft)`;
+    metricDim.textContent = `${l}' Length × ${w}' Width (${sqft} sq.ft)`;
 
-    metricCeiling.textContent = `${dims.ceiling_height_ft || 9.0} ft`;
+    metricCeiling.textContent = `${dims.ceiling_height_ft || 9.0} ft Ceiling`;
     metricClearance.textContent = `${plan.circulation_clearance_in || 32}" Walkway`;
     metricLight.textContent = (plan.natural_light_source || 'Natural Window Intake').replace('_', ' ');
     spatialRecommendation.textContent = plan.design_recommendation || 'Scaled to match spatial ergonomics and circulation corridors.';
