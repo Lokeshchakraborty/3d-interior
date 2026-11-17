@@ -424,15 +424,16 @@ CATALOG: List[Product] = [
 class CatalogService:
     def __init__(self):
         self.catalog = CATALOG
+        self._by_id: Dict[str, Dict[str, Any]] = {p.id: p.model_dump() for p in self.catalog}
+        self._by_style: Dict[str, List[Product]] = {}
+        for p in self.catalog:
+            self._by_style.setdefault(p.style.lower(), []).append(p)
 
     def get_all_products(self) -> List[Dict[str, Any]]:
-        return [p.model_dump() for p in self.catalog]
+        return list(self._by_id.values())
 
     def get_product_by_id(self, product_id: str) -> Optional[Dict[str, Any]]:
-        for p in self.catalog:
-            if p.id == product_id:
-                return p.model_dump()
-        return None
+        return self._by_id.get(product_id)
 
     def search_products(
         self,

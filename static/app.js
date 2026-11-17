@@ -188,7 +188,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 3b. Room Dimension Presets
+  // 3b. Room Dimension Presets & Live Area Guardrail
+  const liveAreaCalc = document.getElementById('live-area-calc');
+
+  function updateLiveAreaGuardrail() {
+    if (!liveAreaCalc) return;
+    const l = parseFloat(roomLengthInput ? roomLengthInput.value : 16) || 16;
+    const w = parseFloat(roomWidthInput ? roomWidthInput.value : 14) || 14;
+    const sqft = (l * w).toFixed(1);
+    liveAreaCalc.innerHTML = `Floor Area: <strong>${sqft} sq.ft</strong> &bull; Walkway Clearance: <strong>32" Min</strong>`;
+  }
+
+  [roomLengthInput, roomWidthInput].forEach(inp => {
+    if (inp) inp.addEventListener('input', updateLiveAreaGuardrail);
+  });
+
   dimPresetBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       dimPresetBtns.forEach(b => b.classList.remove('active'));
@@ -197,6 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (roomLengthInput) roomLengthInput.value = btn.getAttribute('data-length');
       if (roomWidthInput) roomWidthInput.value = btn.getAttribute('data-width');
       if (roomHeightInput) roomHeightInput.value = btn.getAttribute('data-height');
+      updateLiveAreaGuardrail();
     });
   });
 

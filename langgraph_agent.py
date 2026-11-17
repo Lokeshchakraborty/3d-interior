@@ -57,12 +57,22 @@ class RedesignState(TypedDict):
 # ==================== LANGGRAPH NODES ====================
 
 def spatial_perception_node(state: RedesignState) -> Dict[str, Any]:
-    """Node 1: Computes physical room dimensions, zones, and clearances."""
+    """Node 1: Computes physical room dimensions, zones, and clearances with dimensional guardrails."""
     print("[LangGraph: Node 1] Executing Spatial Perception & Clearance Analysis...")
+
+    # Input Dimension Guardrails: sanitize and clamp user dimensions to realistic architectural ranges
+    user_dims = dict(state.get("user_dimensions", {}))
+    if user_dims.get("length_ft"):
+        user_dims["length_ft"] = round(max(6.0, min(80.0, float(user_dims["length_ft"]))), 1)
+    if user_dims.get("width_ft"):
+        user_dims["width_ft"] = round(max(6.0, min(60.0, float(user_dims["width_ft"]))), 1)
+    if user_dims.get("height_ft"):
+        user_dims["height_ft"] = round(max(7.0, min(30.0, float(user_dims["height_ft"]))), 1)
+
     plan = spatial_tool.analyze_room(
         image_path=state["temp_input_path"],
         user_hint=state["user_prompt"],
-        user_dimensions=state["user_dimensions"]
+        user_dimensions=user_dims
     )
     return {
         "spatial_plan": plan,
@@ -73,23 +83,23 @@ def spatial_perception_node(state: RedesignState) -> Dict[str, Any]:
 
 def catalog_curation_node(state: RedesignState) -> Dict[str, Any]:
     """
-    Node 2: Curates real B2C products using simultaneous Playwright live crawling on Amazon & Flipkart
-    alongside dimension-verified catalog matching.
+    Node 2: Curates real B2C products using fast simultaneous Playwright live crawling on Amazon & Flipkart
+    alongside dimension-verified catalog matching and budget guardrails.
     """
     style = state["preferred_style"] or "scandinavian"
     spatial_zones = state["spatial_plan"].get("zones", {})
     enable_live = state.get("enable_live_crawl", True)
+    max_budget = state.get("max_budget_inr")
 
     curated = []
 
-    # 1. Simultaneous Live Playwright Crawl across Amazon & Flipkart
+    # 1. Fast Simultaneous Live Playwright Crawl across Amazon & Flipkart
     if enable_live:
-        print("[LangGraph: Node 2] Launching simultaneous Playwright browser crawl on Amazon India & Flipkart...")
+        print("[LangGraph: Node 2] Launching fast single-browser Playwright crawl on Amazon India & Flipkart...")
         try:
             def run_simultaneous_crawl():
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
-                # Concurrently crawl primary furniture items (e.g. coffee_table and sofa)
                 items = loop.run_until_complete(
                     live_crawler.crawl_both_simultaneous(style=style, category="coffee_table", limit_each=2)
                 )
@@ -97,7 +107,7 @@ def catalog_curation_node(state: RedesignState) -> Dict[str, Any]:
                 return items
 
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-                live_items = executor.submit(run_simultaneous_crawl).result(timeout=22)
+                live_items = executor.submit(run_simultaneous_crawl).result(timeout=18)
 
             if live_items:
                 for item in live_items:
@@ -111,7 +121,7 @@ def catalog_curation_node(state: RedesignState) -> Dict[str, Any]:
     base_curated = catalog_service.curate_room_products(
         style=style,
         spatial_zones=spatial_zones,
-        max_budget_inr=state.get("max_budget_inr")
+        max_budget_inr=max_budget
     )
 
     crawled_categories = {p.get("category") for p in curated}
@@ -119,11 +129,26 @@ def catalog_curation_node(state: RedesignState) -> Dict[str, Any]:
         if base_p.get("category") not in crawled_categories:
             curated.append(base_p)
 
+    # 3. Budget Guardrail: filter if maximum budget is specified
+    if max_budget and max_budget > 0:
+        budget_total = 0
+        budget_curated = []
+        for p in curated:
+            p_cost = p.get("price_inr", 0)
+            if budget_total + p_cost <= max_budget * 1.15:
+                budget_curated.append(p)
+                budget_total += p_cost
+        if budget_curated:
+            curated = budget_curated
+
     return {"curated_products": curated}
 
 def prompt_synthesis_node(state: RedesignState) -> Dict[str, Any]:
-    """Node 3: Synthesizes conditioned LoRA prompt enforcing exact shapes, colors, and room scale."""
-    print("[LangGraph: Node 3] Synthesizing Anti-Hallucination Architectural Prompt...")
+    """
+    Node 3: Synthesizes high-efficiency conditioned architectural prompt enforcing
+    camera optics, circulation corridors, exact product attributes, and anti-hallucination guardrails.
+    """
+    print("[LangGraph: Node 3] Synthesizing Multi-Tier Architectural Prompt with Guardrails...")
     trigger = "modern_interior"
     style = state["preferred_style"]
     style_title = style.replace("_", " ").title()
@@ -135,44 +160,45 @@ def prompt_synthesis_node(state: RedesignState) -> Dict[str, Any]:
     l = dims.get("length_ft")
     h = dims.get("ceiling_height_ft")
 
-    dim_scale_str = ""
+    # Tier 1: Metric Proportions & Circulation Clearance Guardrail
+    dim_guardrail = ""
     if w and l and h:
-        dim_scale_str = f"accurately proportioned for a {l}ft length by {w}ft width space with {h}ft high ceilings and 32-inch circulation walkways, "
+        dim_guardrail = f"architecturally proportioned for {l}ft length by {w}ft width with {h}ft high ceilings, strict 32-inch open walkway clearance corridor, clean negative floor space, "
     elif w and l:
-        dim_scale_str = f"accurately proportioned for a {l}ft by {w}ft floor plan, "
+        dim_guardrail = f"architecturally proportioned for {l}ft by {w}ft floor plan with 32-inch circulation clearance, "
 
-    product_descriptions = []
+    # Tier 2: Product Visual Attributions
+    product_descriptors = []
     for p in state["curated_products"]:
         desc = p.get("visual_description", "")
         shape = p.get("shape", "")
         color = p.get("color", "")
+        cat_name = p.get("category", "furniture").replace("_", " ")
+
         if desc:
-            shape_words = [w for w in re.findall(r'\b[a-zA-Z-]+\b', shape.lower()) if len(w) > 3]
-            has_shape = any(w in desc.lower() for w in shape_words) if shape_words else False
-
-            color_words = [w for w in re.findall(r'\b[a-zA-Z-]+\b', color.lower()) if len(w) > 3]
-            has_color = any(w in desc.lower() for w in color_words) if color_words else False
-
-            if not has_shape and shape:
-                desc = f"{shape}-shaped {desc}"
-            if not has_color and color:
-                desc = f"{desc} in {color}"
-            product_descriptions.append(desc)
+            clean_desc = desc
+            for noise in ["tea poy", "pack of", "set of", "warranty", "home & office"]:
+                clean_desc = re.sub(rf"\b{noise}\b", "", clean_desc, flags=re.IGNORECASE)
+            clean_desc = " ".join(clean_desc.split()).strip()
+            product_descriptors.append(f"{clean_desc}")
         elif shape or color:
-            cat = p.get("category", "furniture")
-            product_descriptions.append(f"{shape} {color} {cat}")
+            product_descriptors.append(f"{shape} {cat_name} in {color}")
 
-    if product_descriptions:
-        items_text = ", ".join(product_descriptions)
-        prompt = (
-            f"{trigger}, {style_title} {room_type} {dim_scale_str}designed with architectural scale and harmony. "
-            f"Featuring {items_text}. "
-            f"Natural daylight flowing from {spatial_plan.get('natural_light_source', 'window')}, "
-            f"photorealistic interior photography, architectural digest quality, correct physical scale and perspective, realistic furniture proportions, high-end textures, 8k resolution"
-        )
-    else:
-        clean_base = state["user_prompt"].strip()
-        prompt = f"{trigger}, {clean_base}" if not clean_base.startswith(trigger) else clean_base
+    products_str = ", ".join(product_descriptors) if product_descriptors else "harmonious minimalist furniture layout"
+
+    # Tier 3: Lighting & Ambient Photometry
+    light_source = spatial_plan.get("natural_light_source", "window").replace("_", " ")
+    lighting_guardrail = f"diffuse natural daylight cascading from {light_source}, warm 3000K ambient mood lighting, soft raytraced ambient occlusion contact shadows on floor"
+
+    # Tier 4: Photographic Framing & Anti-Hallucination Guardrails
+    framing_guardrail = "shot on Hasselblad H6D-100c with 24mm f/8 architectural tilt-shift lens, eye-level camera height at 1.4m, straight parallel vertical walls, zero perspective distortion"
+    quality_guardrail = "Architectural Digest cover editorial, photorealistic textures, 8k resolution, crisp craftsmanship, no floating furniture, no overlapping objects, perfectly grounded floor contact"
+
+    prompt = (
+        f"{trigger}, {style_title} {room_type}, {dim_guardrail}"
+        f"featuring {products_str}. "
+        f"{lighting_guardrail}, {framing_guardrail}, {quality_guardrail}"
+    )
 
     return {"conditioned_prompt": prompt}
 

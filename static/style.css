@@ -2181,3 +2181,41 @@ textarea:focus-visible {
   color: #cbd5e1;
   font-size: 0.7rem;
 }
+
+/* ============================================================
+   Live Calculated Room Envelope Guardrail
+   ============================================================ */
+.dim-guardrail-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+  padding: 0.45rem 0.85rem;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: var(--radius-sm);
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.guardrail-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #34d399;
+}
+
+.guardrail-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 6px #34d399;
+}
+
+.guardrail-text strong {
+  color: #f8fafc;
+}

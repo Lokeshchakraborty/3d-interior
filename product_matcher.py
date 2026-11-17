@@ -61,6 +61,10 @@ class ProductMatcher:
                     work_img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
 
                 cutout = rembg.remove(work_img, session=U2NET_SESSION)
+                # Crop transparent padding for millimeter bounding precision
+                bbox = cutout.getbbox()
+                if bbox:
+                    cutout = cutout.crop(bbox)
                 if cache_key:
                     self.cutout_cache[cache_key] = cutout
                 return cutout
@@ -68,7 +72,13 @@ class ProductMatcher:
                 print(f"[ProductMatcher] rembg execution fallback: {rembg_err}")
 
         # 2. Intelligent Perimeter Flood-Fill Fallback
-        return self._floodfill_matting(raw_img)
+        cutout = self._floodfill_matting(raw_img)
+        bbox = cutout.getbbox()
+        if bbox:
+            cutout = cutout.crop(bbox)
+        if cache_key:
+            self.cutout_cache[cache_key] = cutout
+        return cutout
 
     def _floodfill_matting(self, img: Image.Image) -> Image.Image:
         """Removes uniform or near-white studio backdrop using flood fill and alpha feathering."""
