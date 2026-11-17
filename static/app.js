@@ -237,8 +237,17 @@ document.addEventListener('DOMContentLoaded', () => {
       if (interactiveStageContainer) {
         interactiveStageContainer.classList.remove('hidden');
         if (stageBgImage) {
-          stageBgImage.src = redesignedImageSrc || originalImageSrc;
+          stageBgImage.src = matchedImageSrc || redesignedImageSrc || originalImageSrc;
         }
+        setTimeout(() => {
+          initThreeJS();
+          if (renderer && camera && stageCanvasWrapper) {
+            const r = stageCanvasWrapper.getBoundingClientRect();
+            camera.aspect = r.width / r.height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(r.width, r.height);
+          }
+        }, 60);
       }
       imageViewBadge.textContent = 'Interactive 3D Floor Stager';
     } else if (mode === 'before') {
@@ -711,6 +720,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
       stageItemsLayer.appendChild(itemEl);
     });
+
+    // Populate Three.js 3D WebGL Staging scene with .glb models
+    setTimeout(() => {
+      initThreeJS();
+      populateThreeJSModels(currentStagedProducts);
+    }, 100);
   }
 
   function setupDragEvents(el) {
@@ -766,6 +781,326 @@ document.addEventListener('DOMContentLoaded', () => {
   if (resetStageBtn) {
     resetStageBtn.addEventListener('click', () => {
       renderInteractiveStager(currentStagedProducts);
+    });
+  }
+
+  // ============================================================
+  // Phase 2: Three.js 3D WebGL Precision Stager
+  // ============================================================
+  const threejsCanvas = document.getElementById('threejs-canvas');
+  const btnSubmode3D = document.getElementById('btn-submode-3d');
+  const btnSubmode2D = document.getElementById('btn-submode-2d');
+  const rotateModelBtn = document.getElementById('rotate-model-btn');
+  const threejsHud = document.getElementById('threejs-hud');
+  const hudModelInfo = document.getElementById('hud-model-info');
+  const hudModelTitle = document.getElementById('hud-model-title');
+  const hudModelDim = document.getElementById('hud-model-dim');
+
+  let scene, camera, renderer, orbitControls;
+  let threeModels = [];
+  let selected3DModel = null;
+  let is3DInitialized = false;
+
+  function initThreeJS() {
+    if (is3DInitialized || !threejsCanvas || typeof THREE === 'undefined') return;
+
+    try {
+      scene = new THREE.Scene();
+      const rect = stageCanvasWrapper.getBoundingClientRect();
+      const width = rect.width || 800;
+      const height = rect.height || 600;
+
+      camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+      camera.position.set(0, 2.2, 4.6);
+
+      renderer = new THREE.WebGLRenderer({
+        canvas: threejsCanvas,
+        alpha: true,
+        antialias: true
+      });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+      orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
+      orbitControls.enableDamping = true;
+      orbitControls.dampingFactor = 0.05;
+      orbitControls.maxPolarAngle = Math.PI / 2 + 0.02; // Can't go below floor
+      orbitControls.minDistance = 1.0;
+      orbitControls.maxDistance = 12.0;
+      orbitControls.target.set(0, 0.5, 0);
+
+      // Ambient Light
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
+      scene.add(ambientLight);
+
+      // Directional Sun/Window Light with Soft Shadow
+      const dirLight = new THREE.DirectionalLight(0xfff6e6, 1.15);
+      dirLight.position.set(-3, 6, 4);
+      dirLight.castShadow = true;
+      dirLight.shadow.mapSize.width = 1024;
+      dirLight.shadow.mapSize.height = 1024;
+      dirLight.shadow.camera.near = 0.5;
+      dirLight.shadow.camera.far = 15;
+      dirLight.shadow.bias = -0.001;
+      scene.add(dirLight);
+
+      // Soft Secondary Fill Light
+      const fillLight = new THREE.DirectionalLight(0xdbeafe, 0.45);
+      fillLight.position.set(3, 4, -2);
+      scene.add(fillLight);
+
+      // Ground Plane (Shadow Receiver)
+      const floorGeo = new THREE.PlaneGeometry(16, 16);
+      const floorMat = new THREE.ShadowMaterial({ opacity: 0.38 });
+      const floor = new THREE.Mesh(floorGeo, floorMat);
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = 0;
+      floor.receiveShadow = true;
+      scene.add(floor);
+
+      // Subtle Grid Guide for Walkway Clearance
+      const grid = new THREE.GridHelper(8, 16, 0x38bdf8, 0x1e293b);
+      grid.position.y = 0.001;
+      grid.material.opacity = 0.35;
+      grid.material.transparent = true;
+      scene.add(grid);
+
+      // Raycasting for clicking & dragging 3D furniture
+      setupThreeJSRaycasting();
+
+      // Render Loop
+      const animate = () => {
+        requestAnimationFrame(animate);
+        orbitControls.update();
+        const selHelper = scene.getObjectByName('selection-helper');
+        if (selHelper) selHelper.update();
+        renderer.render(scene, camera);
+      };
+      animate();
+
+      window.addEventListener('resize', () => {
+        if (!stageCanvasWrapper || !renderer || !camera) return;
+        const r = stageCanvasWrapper.getBoundingClientRect();
+        camera.aspect = r.width / r.height;
+        camera.updateProjectionMatrix();
+        renderer.setSize(r.width, r.height);
+      });
+
+      is3DInitialized = true;
+      console.log("[ThreeJS] 3D Stager initialized successfully!");
+    } catch (e) {
+      console.error("[ThreeJS] Initialization error:", e);
+    }
+  }
+
+  function setupThreeJSRaycasting() {
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let isDragging3D = false;
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0); // Y = 0 floor plane
+    const planeIntersect = new THREE.Vector3();
+
+    threejsCanvas.addEventListener('pointerdown', (e) => {
+      const rect = threejsCanvas.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(threeModels, true);
+
+      if (intersects.length > 0) {
+        let topGroup = intersects[0].object;
+        while (topGroup.parent && topGroup.parent !== scene) {
+          topGroup = topGroup.parent;
+        }
+        select3DModel(topGroup);
+
+        if (e.button === 0 && !e.shiftKey) {
+          isDragging3D = true;
+          orbitControls.enabled = false;
+        }
+      } else {
+        deselect3DModel();
+      }
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!isDragging3D || !selected3DModel) return;
+      const rect = threejsCanvas.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      if (raycaster.ray.intersectPlane(plane, planeIntersect)) {
+        selected3DModel.position.x = Math.max(-3.5, Math.min(3.5, planeIntersect.x));
+        selected3DModel.position.z = Math.max(-3.5, Math.min(3.5, planeIntersect.z));
+      }
+    });
+
+    window.addEventListener('pointerup', () => {
+      if (isDragging3D) {
+        isDragging3D = false;
+        orbitControls.enabled = true;
+      }
+    });
+  }
+
+  function select3DModel(modelGroup) {
+    deselect3DModel();
+    selected3DModel = modelGroup;
+
+    const bbox = new THREE.BoxHelper(modelGroup, 0x38bdf8);
+    bbox.name = 'selection-helper';
+    scene.add(bbox);
+
+    const prod = modelGroup.userData || {};
+    if (hudModelInfo && prod.title) {
+      hudModelTitle.textContent = `${prod.store} - ${prod.title.slice(0, 22)}...`;
+      const d = prod.dimensions || {};
+      hudModelDim.textContent = `${d.width_in || 48}"W × ${d.depth_in || 28}"D × ${d.height_in || 30}"H (Verified)`;
+      hudModelInfo.classList.remove('hidden');
+    }
+  }
+
+  function deselect3DModel() {
+    selected3DModel = null;
+    const existingHelper = scene ? scene.getObjectByName('selection-helper') : null;
+    if (existingHelper) scene.remove(existingHelper);
+    if (hudModelInfo) hudModelInfo.classList.add('hidden');
+  }
+
+  function populateThreeJSModels(products) {
+    if (!scene || typeof THREE === 'undefined') return;
+
+    // Remove existing models
+    threeModels.forEach(m => scene.remove(m));
+    threeModels = [];
+    deselect3DModel();
+
+    const loader = (typeof THREE.GLTFLoader !== 'undefined') ? new THREE.GLTFLoader() : null;
+
+    products.forEach((prod, idx) => {
+      const coords = prod.stage_coords || {};
+      const xPct = coords.center_x_pct || (prod.hotspot ? prod.hotspot.x_pct : 50);
+      const yPct = coords.center_y_pct || (prod.hotspot ? prod.hotspot.y_pct : 60);
+
+      // Map 2D floor percentage (0..100) to 3D world meters (-3.5 .. +3.5)
+      const posX = ((xPct - 50) / 50) * 2.8;
+      const posZ = ((yPct - 50) / 50) * 2.2;
+
+      const dim = prod.dimensions || {};
+      const wM = Math.max(0.3, Math.min((dim.width_in || 48) * 0.0254, 3.5));
+      const dM = Math.max(0.3, Math.min((dim.depth_in || 28) * 0.0254, 2.5));
+      const hM = Math.max(0.02, Math.min((dim.height_in || 30) * 0.0254, 2.2));
+
+      // Attempt GLTF Load if GLB URL is available
+      if (loader && prod.model_3d_url) {
+        loader.load(
+          prod.model_3d_url,
+          (gltf) => {
+            const root = gltf.scene;
+            root.position.set(posX, 0, posZ);
+            root.traverse(child => {
+              if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+              }
+            });
+            root.userData = prod;
+            scene.add(root);
+            threeModels.push(root);
+          },
+          undefined,
+          (err) => {
+            // Fallback to procedural PBR mesh
+            createProcedural3DMesh(prod, posX, posZ, wM, dM, hM);
+          }
+        );
+      } else {
+        createProcedural3DMesh(prod, posX, posZ, wM, dM, hM);
+      }
+    });
+  }
+
+  function createProcedural3DMesh(prod, posX, posZ, wM, dM, hM) {
+    const group = new THREE.Group();
+    const cat = (prod.category || 'sofa').toLowerCase();
+
+    let mat;
+    if (prod.cutout_url) {
+      const texture = new THREE.TextureLoader().load(prod.cutout_url);
+      mat = new THREE.MeshStandardMaterial({
+        map: texture,
+        roughness: 0.6,
+        metalness: 0.1,
+        transparent: true
+      });
+    } else {
+      mat = new THREE.MeshStandardMaterial({
+        color: 0x38bdf8,
+        roughness: 0.5,
+        metalness: 0.2
+      });
+    }
+
+    let geo;
+    if (cat === 'rug') {
+      geo = new THREE.BoxGeometry(wM, 0.015, dM);
+    } else if (cat === 'coffee_table') {
+      geo = new THREE.CylinderGeometry(Math.min(wM, dM) / 2, Math.min(wM, dM) / 2, hM, 24);
+    } else if (cat === 'floor_lamp') {
+      geo = new THREE.CylinderGeometry(0.03, minR(wM, dM), hM, 16);
+    } else {
+      geo = new THREE.BoxGeometry(wM, hM, dM);
+    }
+
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.y = hM / 2;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    group.add(mesh);
+
+    group.position.set(posX, 0, posZ);
+    group.userData = prod;
+    scene.add(group);
+    threeModels.push(group);
+  }
+
+  function minR(w, d) {
+    return Math.max(0.12, Math.min(w, d) * 0.4);
+  }
+
+  if (rotateModelBtn) {
+    rotateModelBtn.addEventListener('click', () => {
+      if (selected3DModel) {
+        selected3DModel.rotation.y += Math.PI / 4;
+        const helper = scene.getObjectByName('selection-helper');
+        if (helper) helper.update();
+      }
+    });
+  }
+
+  // Submode Toggles (3D WebGL vs 2D Canvas)
+  if (btnSubmode3D && btnSubmode2D) {
+    btnSubmode3D.addEventListener('click', () => {
+      btnSubmode3D.classList.add('active');
+      btnSubmode2D.classList.remove('active');
+      threejsCanvas.classList.remove('hidden');
+      threejsHud.classList.remove('hidden');
+      stageBgImage.classList.add('hidden');
+      stageItemsLayer.classList.add('hidden');
+      initThreeJS();
+    });
+
+    btnSubmode2D.addEventListener('click', () => {
+      btnSubmode2D.classList.add('active');
+      btnSubmode3D.classList.remove('active');
+      threejsCanvas.classList.add('hidden');
+      threejsHud.classList.add('hidden');
+      stageBgImage.classList.remove('hidden');
+      stageItemsLayer.classList.remove('hidden');
     });
   }
 });

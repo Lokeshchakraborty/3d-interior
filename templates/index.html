@@ -316,14 +316,35 @@
               </div>
             </div>
 
-            <!-- Interactive Precision Stager Container -->
+            <!-- Interactive Precision Stager Container (Phase 2: 3D WebGL & 2D) -->
             <div class="interactive-stage-container hidden" id="interactive-stage-container">
               <div class="stage-toolbar">
                 <div class="stage-info">
                   <span class="stage-badge">100% Precision Staging</span>
-                  <span class="stage-hint">Drag real Amazon, Flipkart & IKEA furniture across your floor &bull; Adjust size with + / -</span>
+                  <div class="stage-submode-tabs">
+                    <button type="button" class="stage-submode-btn active" id="btn-submode-3d">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                        <line x1="12" y1="22.08" x2="12" y2="12"/>
+                      </svg>
+                      3D WebGL Stager
+                    </button>
+                    <button type="button" class="stage-submode-btn" id="btn-submode-2d">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                      </svg>
+                      2D Precision Canvas
+                    </button>
+                  </div>
                 </div>
                 <div class="stage-actions">
+                  <button type="button" id="rotate-model-btn" class="stage-btn-sm" title="Rotate selected 3D furniture 45 degrees">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+                      <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                    </svg>
+                    Rotate 45°
+                  </button>
                   <button type="button" id="reset-stage-btn" class="stage-btn-sm" title="Reset all products to agent spatial calculation">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
                       <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
@@ -333,10 +354,26 @@
                   </button>
                 </div>
               </div>
+
+              <!-- 3D WebGL / 2D Canvas Viewport -->
               <div class="stage-canvas-wrapper" id="stage-canvas-wrapper">
-                <img id="stage-bg-image" alt="Room stage backdrop" class="stage-bg-img">
-                <div id="stage-items-layer" class="stage-items-layer">
-                  <!-- Dynamically populated draggable product cutouts -->
+                <!-- Three.js 3D Viewport Canvas -->
+                <canvas id="threejs-canvas" class="threejs-canvas"></canvas>
+
+                <!-- 2D Canvas Fallback & Layer -->
+                <img id="stage-bg-image" alt="Room stage backdrop" class="stage-bg-img hidden">
+                <div id="stage-items-layer" class="stage-items-layer hidden"></div>
+
+                <!-- 3D HUD & Navigation Instructions Overlay -->
+                <div class="threejs-hud" id="threejs-hud">
+                  <div class="hud-item hud-hint">
+                    <span class="hud-dot"></span>
+                    <span>Left Drag: Orbit 3D &bull; Right Drag: Pan &bull; Click Model: Select & Move on Floor</span>
+                  </div>
+                  <div class="hud-item hud-active-model hidden" id="hud-model-info">
+                    <strong id="hud-model-title">Sofa</strong>
+                    <span id="hud-model-dim">80"W × 35"D × 32"H</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -430,6 +467,10 @@
     </main>
   </div>
 
+  <!-- Three.js WebGL & 3D Staging Engine (Phase 2) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>

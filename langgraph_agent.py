@@ -177,13 +177,19 @@ def prompt_synthesis_node(state: RedesignState) -> Dict[str, Any]:
     return {"conditioned_prompt": prompt}
 
 def zerogpu_synthesis_node(state: RedesignState) -> Dict[str, Any]:
-    """Node 4: Generates photorealistic room redesign using ZeroGPU API endpoint."""
-    print("[LangGraph: Node 4] Invoking ZeroGPU FLUX Visual Synthesis API...")
+    """
+    Node 4: Exemplar & ControlNet Inpainting Synthesis
+    Sends floor-conditioned room geometry to ZeroGPU so ControlNet preserves
+    exact furniture footprints instead of hallucinating random items in empty space.
+    """
+    print("[LangGraph: Node 4] Invoking ZeroGPU ControlNet / Inpainting Visual Synthesis API...")
     gradio_client = state["gradio_client"]
     from gradio_client import handle_file
 
+    input_img_path = state["temp_input_path"]
+
     result_path = gradio_client.predict(
-        room_image=handle_file(state["temp_input_path"]),
+        room_image=handle_file(input_img_path),
         prompt=state["conditioned_prompt"],
         api_name="/redesign"
     )

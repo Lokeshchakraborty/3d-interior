@@ -5,7 +5,7 @@ import tempfile
 import uvicorn
 from typing import Optional
 from fastapi import FastAPI, UploadFile, File, Form
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from gradio_client import Client, handle_file
 from PIL import Image
@@ -13,6 +13,7 @@ from PIL import Image
 from catalog_service import catalog_service
 from agent_service import AgentService
 from spatial_tool import spatial_tool
+from mesh_generator import mesh_generator
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -70,6 +71,24 @@ def get_catalog():
         "count": len(products),
         "products": products
     })
+
+@app.get("/api/model_3d/{product_id}")
+def get_product_3d_model(product_id: str):
+    """
+    Returns the binary GLB 3D model for the specified product ID.
+    Used by Three.js GLTFLoader for real-time 3D WebGL spatial staging.
+    """
+    product = catalog_service.get_product_by_id(product_id)
+    if not product:
+        # Fallback for dynamic live-crawled products
+        product = {
+            "id": product_id,
+            "category": "coffee_table",
+            "shape": "oval curved",
+            "dimensions": {"width_in": 36.0, "depth_in": 24.0, "height_in": 18.0}
+        }
+    glb_bytes = mesh_generator.get_or_generate_glb(product)
+    return Response(content=glb_bytes, media_type="model/gltf-binary")
 
 @app.get("/api/status")
 def get_status():
