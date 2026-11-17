@@ -39,12 +39,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // Tab View Switcher
   const viewSwitcher = document.getElementById('view-switcher');
   const tabAfter = document.getElementById('tab-after');
+  const tabMatched = document.getElementById('tab-matched');
   const tabBefore = document.getElementById('tab-before');
   const tabSplit = document.getElementById('tab-split');
   const singleViewContainer = document.getElementById('single-view-container');
   const splitViewContainer = document.getElementById('split-view-container');
   const splitBeforeImg = document.getElementById('split-before-img');
   const splitAfterImg = document.getElementById('split-after-img');
+  const matchedImage = document.getElementById('matched-image');
 
   // Hotspots & Product BOM Elements
   const hotspotPins = document.getElementById('hotspot-pins');
@@ -68,11 +70,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('step-1'),
     document.getElementById('step-2'),
     document.getElementById('step-3'),
-    document.getElementById('step-4')
+    document.getElementById('step-4'),
+    document.getElementById('step-5')
   ];
 
   let originalImageSrc = null;
   let redesignedImageSrc = null;
+  let matchedImageSrc = null;
   let progressInterval = null;
   let selectedStyle = 'scandinavian';
 
@@ -191,25 +195,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 4. View Mode Switcher
   tabAfter.addEventListener('click', () => switchView('after'));
+  if (tabMatched) tabMatched.addEventListener('click', () => switchView('matched'));
   tabBefore.addEventListener('click', () => switchView('before'));
   tabSplit.addEventListener('click', () => switchView('split'));
 
   function switchView(mode) {
-    [tabAfter, tabBefore, tabSplit].forEach(t => t.classList.remove('active'));
+    [tabAfter, tabMatched, tabBefore, tabSplit].forEach(t => t && t.classList.remove('active'));
 
     if (mode === 'after') {
       tabAfter.classList.add('active');
       singleViewContainer.classList.remove('hidden');
       splitViewContainer.classList.add('hidden');
       outputImage.classList.remove('hidden');
+      if (matchedImage) matchedImage.classList.add('hidden');
       beforeImage.classList.add('hidden');
       hotspotPins.classList.remove('hidden');
-      imageViewBadge.textContent = 'Redesigned (AI)';
+      imageViewBadge.textContent = 'AI Ambiance (FLUX)';
+    } else if (mode === 'matched') {
+      if (tabMatched) tabMatched.classList.add('active');
+      singleViewContainer.classList.remove('hidden');
+      splitViewContainer.classList.add('hidden');
+      outputImage.classList.add('hidden');
+      if (matchedImage) matchedImage.classList.remove('hidden');
+      beforeImage.classList.add('hidden');
+      hotspotPins.classList.remove('hidden');
+      imageViewBadge.textContent = 'Exact Product Placement (Amazon/IKEA Packshots)';
     } else if (mode === 'before') {
       tabBefore.classList.add('active');
       singleViewContainer.classList.remove('hidden');
       splitViewContainer.classList.add('hidden');
       outputImage.classList.add('hidden');
+      if (matchedImage) matchedImage.classList.add('hidden');
       beforeImage.classList.remove('hidden');
       hotspotPins.classList.add('hidden');
       imageViewBadge.textContent = 'Original Room (Before)';
@@ -284,6 +300,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // If Agentic pipeline succeeded, render spatial plan, products & hotspots
       if (isAgentic && data.products) {
+        if (data.matched_image_url && matchedImage) {
+          matchedImageSrc = data.matched_image_url;
+          matchedImage.src = matchedImageSrc;
+          if (tabMatched) tabMatched.classList.remove('hidden');
+        }
+
         renderSpatialAnalysis(data.spatial_plan, data.agent_engine);
         renderPurchasableProducts(data.products, data.total_estimated_cost_inr);
         renderHotspots(data.products);
@@ -291,7 +313,8 @@ document.addEventListener('DOMContentLoaded', () => {
         productsSection.classList.remove('hidden');
         spatialCard.classList.remove('hidden');
       } else {
-        // Direct mode: hide product sections
+        // Direct mode: hide product sections and matched tab
+        if (tabMatched) tabMatched.classList.add('hidden');
         productsSection.classList.add('hidden');
         spatialCard.classList.add('hidden');
         hotspotPins.innerHTML = '';
@@ -539,18 +562,22 @@ document.addEventListener('DOMContentLoaded', () => {
       if (progress > 92) progress = 92;
       progressBarFill.style.width = `${progress}%`;
 
-      if (progress > 20 && progress <= 45) {
-        steps[1].classList.add('active');
+      if (progress > 15 && progress <= 35) {
+        if (steps[1]) steps[1].classList.add('active');
         loadingStageText.textContent = isAgentic ? 'Curating B2C Catalog Products...' : 'Connecting to ZeroGPU A100...';
         loadingStageSub.textContent = isAgentic ? 'Filtering Amazon, Flipkart & IKEA items fitting room dimensions' : 'Allocating GPU compute';
-      } else if (progress > 45 && progress <= 70) {
-        steps[2].classList.add('active');
+      } else if (progress > 35 && progress <= 55) {
+        if (steps[2]) steps[2].classList.add('active');
         loadingStageText.textContent = isAgentic ? 'Synthesizing Architectural LoRA Prompt...' : 'Denoising & synthesizing layout...';
-        loadingStageSub.textContent = isAgentic ? 'Embedding real materials, textures, and geometry' : 'Running FLUX LoRA diffusion steps';
-      } else if (progress > 70) {
-        steps[3].classList.add('active');
+        loadingStageSub.textContent = isAgentic ? 'Embedding exact shapes, colors, and physical bounds' : 'Running FLUX LoRA diffusion steps';
+      } else if (progress > 55 && progress <= 78) {
+        if (steps[3]) steps[3].classList.add('active');
         loadingStageText.textContent = 'Rendering Visuals on ZeroGPU A100...';
         loadingStageSub.textContent = 'Applying photorealistic 8K textures and architectural lighting';
+      } else if (progress > 78) {
+        if (steps[4]) steps[4].classList.add('active');
+        loadingStageText.textContent = isAgentic ? 'LangGraph Exact Product Compositing...' : 'Finalizing output...';
+        loadingStageSub.textContent = isAgentic ? 'Perspective matching real Amazon & IKEA packshots onto floor' : 'Completing generation';
       }
     }, 280);
   }

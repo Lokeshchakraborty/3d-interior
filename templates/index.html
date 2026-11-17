@@ -220,7 +220,8 @@
           <div class="header-controls">
             <!-- View Mode Switcher -->
             <div class="view-switcher hidden" id="view-switcher">
-              <button type="button" class="view-tab active" id="tab-after">After (AI)</button>
+              <button type="button" class="view-tab active" id="tab-after">AI Ambiance</button>
+              <button type="button" class="view-tab" id="tab-matched">Exact Product Match</button>
               <button type="button" class="view-tab" id="tab-before">Before (Original)</button>
               <button type="button" class="view-tab" id="tab-split">Side-by-Side</button>
             </div>
@@ -256,10 +257,11 @@
               <div class="progress-bar-fill" id="progress-bar-fill"></div>
             </div>
             <div class="stage-steps">
-              <span class="stage-step active" id="step-1">1. Spatial Scan</span>
+              <span class="stage-step active" id="step-1">1. Spatial Node</span>
               <span class="stage-step" id="step-2">2. Catalog RAG</span>
-              <span class="stage-step" id="step-3">3. Condition Prompt</span>
-              <span class="stage-step" id="step-4">4. ZeroGPU Render</span>
+              <span class="stage-step" id="step-3">3. Prompt Node</span>
+              <span class="stage-step" id="step-4">4. ZeroGPU FLUX</span>
+              <span class="stage-step" id="step-5">5. LangGraph Match</span>
             </div>
           </div>
 
@@ -269,6 +271,7 @@
             <div class="image-wrapper single-view" id="single-view-container">
               <div class="hotspot-overlay-container" id="hotspot-overlay-container">
                 <img id="output-image" alt="Redesigned room result" class="output-img">
+                <img id="matched-image" alt="Exact product composite" class="output-img hidden">
                 <img id="before-image" alt="Original room" class="output-img hidden">
                 <!-- Dynamic Interactive Hotspot Pins -->
                 <div id="hotspot-pins" class="hotspot-pins-layer"></div>
