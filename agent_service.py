@@ -35,12 +35,13 @@ class AgentService:
         max_budget_inr: Optional[int] = None,
         room_length: Optional[float] = None,
         room_width: Optional[float] = None,
-        room_height: Optional[float] = None
+        room_height: Optional[float] = None,
+        enable_live_crawl: bool = True
     ) -> Dict[str, Any]:
         """
         Executes the LangGraph Redesign State Machine:
         1. Spatial Perception Node
-        2. Catalog Curation Node
+        2. Catalog Curation Node (Simultaneous Playwright Amazon & Flipkart Crawl)
         3. Conditioned Prompt Synthesizer Node
         4. ZeroGPU Generative Node
         5. Exact Product Perspective Matching Node
@@ -80,6 +81,7 @@ class AgentService:
                 "room_width": room_width,
                 "room_height": room_height,
                 "user_dimensions": user_dimensions,
+                "enable_live_crawl": enable_live_crawl,
                 "gradio_client": gradio_client
             }
 

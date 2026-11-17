@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const modeDirect = document.getElementById('mode-direct');
   const modeAgenticLabel = document.getElementById('mode-agentic-label');
   const modeDirectLabel = document.getElementById('mode-direct-label');
+  const enableLiveCrawlInput = document.getElementById('enable-live-crawl');
 
   // Room Dimension Inputs & Presets
   const roomLengthInput = document.getElementById('room-length');
@@ -275,6 +276,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (roomHeightInput && roomHeightInput.value) {
         formData.append('room_height', roomHeightInput.value);
       }
+      if (enableLiveCrawlInput) {
+        formData.append('enable_live_crawl', enableLiveCrawlInput.checked ? 'true' : 'false');
+      }
     }
 
     try {
@@ -391,11 +395,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const storeClass = `store-${prod.store.toLowerCase().replace('.', '')}`;
       const dim = prod.dimensions || {};
       const dimStr = `${dim.width_in}"W × ${dim.depth_in}"D × ${dim.height_in}"H (${dim.width_cm} × ${dim.depth_cm} × ${dim.height_cm} cm)`;
+      const liveBadgeHtml = prod.is_live_crawled 
+        ? `<span class="product-live-badge" title="Live crawled via Playwright Chromium from ${prod.store}"><span class="live-dot"></span>⚡ Live Scraped</span>`
+        : '';
 
       card.innerHTML = `
         <div class="product-thumb-wrap">
           <img src="${prod.image_url}" alt="${prod.title}" class="product-thumb" loading="lazy">
           <span class="product-store-badge ${storeClass}">${prod.store}</span>
+          ${liveBadgeHtml}
           <span class="product-pin-idx">${idx + 1}</span>
         </div>
         <div class="product-info">

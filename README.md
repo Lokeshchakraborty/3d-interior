@@ -16,42 +16,52 @@ Unlike conventional generative interior apps that hallucinate random, unpurchasa
 ```
                                   +------------------------------+
                                   |     User Room Photo Upload   |
+                                  |  + Length, Width, Height (ft)|
                                   +--------------+---------------+
                                                  |
                                                  v
                        +----------------------------------------------------+
-                       |       Gemini 3.8 Flash Spatial Reasoning Tool      |
-                       | - Physical Room Dimensions (W x D x H)             |
-                       | - Zoned Placement Clearance (Walkways >= 32")     |
-                       | - Natural Light Direction & Perspective Hotspots   |
+                       |           LangGraph StateGraph v1.2 Engine         |
+                       | Node 1: Spatial Perception (Gemini 3.8 Flash)      |
+                       |         - Ground-truth calibration (L x W x H)     |
+                       |         - Walkway clearance corridors (>= 32")     |
                        +-------------------------+--------------------------+
                                                  |
                                                  v
                        +----------------------------------------------------+
-                       |           B2C Product Catalog Tool                 |
-                       | - Queries Amazon.in, Flipkart, and IKEA            |
-                       | - Matches verified dimensions to spatial zones     |
-                       | - Filters by aesthetic style (Scandi, Japandi, etc)|
+                       | Node 2: Simultaneous Playwright Crawler & Catalog  |
+                       |         - Headless Chromium crawls Amazon.in &     |
+                       |           Flipkart simultaneously in async pool    |
+                       |         - Scrapes live prices, packshots & specs   |
+                       |         - Backfills with verified B2C catalog      |
                        +-------------------------+--------------------------+
                                                  |
                                                  v
                        +----------------------------------------------------+
-                       |     Conditioned Architectural Prompt Synthesizer   |
-                       | - Injects exact product materials, colors, forms   |
-                       | - Retains LoRA trigger 'modern_interior'           |
+                       | Node 3: Conditioned Architectural Prompt Synthesizer|
+                       |         - Injects exact shapes, colors, scale      |
+                       |         - Retains LoRA trigger 'modern_interior'   |
                        +-------------------------+--------------------------+
                                                  |
                                                  v
                        +----------------------------------------------------+
-                       |             ZeroGPU FLUX A100 Tool                 |
-                       | (lokesh006/room-design-api endpoint)               |
+                       | Node 4: ZeroGPU FLUX A100 Visual Synthesis API     |
+                       |         - (lokesh006/room-design-api endpoint)     |
+                       +-------------------------+--------------------------+
+                                                 |
+                                                 v
+                       +----------------------------------------------------+
+                       | Node 5: Exact Product Perspective Compositing      |
+                       |         - Transforms actual packshots onto floor   |
+                       |         - Renders elliptical ambient drop-shadows  |
+                       |         - Generates 'Exact Product Match' view     |
                        +-------------------------+--------------------------+
                                                  |
                                                  v
                        +----------------------------------------------------+
                        |             FastAPI Serverless Streaming           |
                        | - In-memory Base64 data URL (Zero-disk footprint)  |
-                       | - Bill of Materials (BOM) with Prices & Buy Links  |
+                       | - Bill of Materials (BOM) with Live Store Badges   |
                        | - Interactive 2D Perspective Hotspot Pins          |
                        +----------------------------------------------------+
 ```
@@ -60,11 +70,14 @@ Unlike conventional generative interior apps that hallucinate random, unpurchasa
 
 ## Features
 
-- **Agentic vs. Direct Modes**: Choose between full Agentic product dimension alignment or direct visual diffusion.
+- **LangGraph StateGraph v1.2**: 5-node autonomous pipeline with conditional state routing and error fallbacks.
+- **Simultaneous Playwright Crawler**: Live, concurrent headless browser navigation across **Amazon India** and **Flipkart** to extract real-time prices, specifications, and packshots.
+- **Ground-Truth Dimensional Calibration**: Input room Length, Width, and Ceiling Height (ft) to eliminate scale hallucinations and preserve 32" circulation walkways.
+- **Exact Product Perspective Compositing**: Projects real e-commerce packshots directly into the redesigned floor zone with realistic elliptical ambient drop-shadows.
+- **Shape & Color Precision**: Every product explicitly defines geometric shape (rectangular, curved cantilever, etc.) and color palette.
 - **5 Aesthetic Styles**: Scandinavian, Japandi, Modern Luxury, Bohemian, and Industrial.
 - **Interactive Hotspot Pins**: Click or hover over pins on the rendered image to highlight the corresponding product card in the Bill of Materials.
 - **Direct Buy Links**: One-click direct shopping links for Amazon.in, Flipkart, and IKEA India.
-- **Spatial Breakdown Card**: Displays calculated room dimensions, ceiling height, and circulation walkway clearances.
 - **Zero Disk Footprint**: In-memory Base64 image streaming ensures no temporary images accumulate on the server disk.
 - **FastAPI Backend with Swagger**: Interactive documentation accessible at `/docs` and `/redoc`.
 
@@ -75,8 +88,9 @@ Unlike conventional generative interior apps that hallucinate random, unpurchasa
 ### 1. Install Dependencies
 ```bash
 pip install -r requirements.txt
+playwright install chromium
 ```
-*(Or with uv: `uv pip install -r requirements.txt`)*
+*(Or with uv: `uv pip install -r requirements.txt && uv run playwright install chromium`)*
 
 ### 2. Configure Tokens (.env)
 Copy `.env.example` to `.env`:
@@ -106,14 +120,17 @@ Open **[http://localhost:5000](http://localhost:5000)** in your browser.
 
 ```
 ├── server.py                              # FastAPI server with Agentic & Direct endpoints
-├── agent_service.py                       # Agent orchestrator coordinating tools and ZeroGPU
-├── spatial_tool.py                        # Spatial perception & room dimension calculation tool
-├── catalog_service.py                     # B2C furniture catalog tool (Amazon, Flipkart, IKEA)
+├── langgraph_agent.py                     # Compiled LangGraph StateGraph (5 nodes)
+├── live_crawler.py                        # Simultaneous Playwright crawler (Amazon & Flipkart)
+├── agent_service.py                       # High-level orchestrator calling LangGraph StateGraph
+├── spatial_tool.py                        # Spatial perception & ground-truth room calculation
+├── catalog_service.py                     # B2C furniture catalog (Amazon, Flipkart, IKEA)
+├── product_matcher.py                     # Perspective compositor with elliptical drop shadows
 ├── templates/
-│   └── index.html                         # Modern UI with interactive hotspots & BOM cards
+│   └── index.html                         # Modern UI with live crawler toggle & hotspots
 ├── static/
 │   ├── style.css                          # Modern dark architectural UI styling
-│   └── app.js                             # Client-side agentic pipeline & hotspot interaction
+│   └── app.js                             # Client-side agentic pipeline & view switcher
 ├── text_redesign.py                       # Standalone Python CLI script for generation
 ├── prepare_dataset.py                     # LoRA dataset preparation & cropping pipeline
 ├── generate_project_pdf.py                # Academic project report PDF generator

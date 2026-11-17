@@ -13,7 +13,9 @@ import io
 import os
 import re
 import base64
+import asyncio
 import tempfile
+import concurrent.futures
 from typing import Dict, Any, List, Optional, TypedDict
 from PIL import Image
 
@@ -21,6 +23,7 @@ from langgraph.graph import StateGraph, END
 from catalog_service import catalog_service
 from spatial_tool import spatial_tool
 from product_matcher import product_matcher
+from live_crawler import live_crawler
 
 class RedesignState(TypedDict):
     # Input parameters
@@ -33,6 +36,7 @@ class RedesignState(TypedDict):
     room_width: Optional[float]
     room_height: Optional[float]
     user_dimensions: Dict[str, float]
+    enable_live_crawl: bool
     gradio_client: Any
 
     # Node state outputs
@@ -68,16 +72,53 @@ def spatial_perception_node(state: RedesignState) -> Dict[str, Any]:
     }
 
 def catalog_curation_node(state: RedesignState) -> Dict[str, Any]:
-    """Node 2: Curates real B2C products from Amazon, Flipkart, and IKEA fitting zone boundaries."""
-    print("[LangGraph: Node 2] Querying B2C Product Catalog with Physical Dimensional Bounds...")
+    """
+    Node 2: Curates real B2C products using simultaneous Playwright live crawling on Amazon & Flipkart
+    alongside dimension-verified catalog matching.
+    """
     style = state["preferred_style"] or "scandinavian"
     spatial_zones = state["spatial_plan"].get("zones", {})
+    enable_live = state.get("enable_live_crawl", True)
 
-    curated = catalog_service.curate_room_products(
+    curated = []
+
+    # 1. Simultaneous Live Playwright Crawl across Amazon & Flipkart
+    if enable_live:
+        print("[LangGraph: Node 2] Launching simultaneous Playwright browser crawl on Amazon India & Flipkart...")
+        try:
+            def run_simultaneous_crawl():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                # Concurrently crawl primary furniture items (e.g. coffee_table and sofa)
+                items = loop.run_until_complete(
+                    live_crawler.crawl_both_simultaneous(style=style, category="coffee_table", limit_each=2)
+                )
+                loop.close()
+                return items
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                live_items = executor.submit(run_simultaneous_crawl).result(timeout=22)
+
+            if live_items:
+                for item in live_items:
+                    item["is_live_crawled"] = True
+                    curated.append(item)
+                print(f"[LangGraph: Node 2] Successfully injected {len(live_items)} LIVE crawled products from Amazon & Flipkart into design!")
+        except Exception as crawl_err:
+            print(f"[LangGraph: Node 2] Live crawl fallback notice: {crawl_err}")
+
+    # 2. Fill remaining spatial zones with verified catalog products
+    base_curated = catalog_service.curate_room_products(
         style=style,
         spatial_zones=spatial_zones,
         max_budget_inr=state.get("max_budget_inr")
     )
+
+    crawled_categories = {p.get("category") for p in curated}
+    for base_p in base_curated:
+        if base_p.get("category") not in crawled_categories:
+            curated.append(base_p)
+
     return {"curated_products": curated}
 
 def prompt_synthesis_node(state: RedesignState) -> Dict[str, Any]:
@@ -235,3 +276,4 @@ def build_redesign_graph():
 
 # Singleton compiled LangGraph instance
 langgraph_app = build_redesign_graph()
+

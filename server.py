@@ -90,12 +90,13 @@ async def redesign_agentic(
     budget: Optional[int] = Form(None),
     room_length: Optional[float] = Form(None),
     room_width: Optional[float] = Form(None),
-    room_height: Optional[float] = Form(None)
+    room_height: Optional[float] = Form(None),
+    enable_live_crawl: Optional[str] = Form("true")
 ):
     """
     Agentic redesign endpoint with Ground-Truth Dimensional Calibration:
     1. Runs spatial perception & room dimension calculation using user Length, Width, Height.
-    2. Curates real dimension-verified products from Amazon/Flipkart/IKEA.
+    2. Curates real dimension-verified products from Amazon/Flipkart/IKEA via Playwright live crawler.
     3. Synthesizes an architectural prompt describing those exact products.
     4. Calls ZeroGPU visual generation API.
     5. Returns redesigned image with bill of materials and interactive hotspots.
@@ -108,7 +109,8 @@ async def redesign_agentic(
         if not image_bytes:
             return JSONResponse(status_code=400, content={"success": False, "error": "Image file is empty"})
 
-        print(f"[Agentic Redesign] Initiating pipeline for: {room_image.filename} (L={room_length}, W={room_width}, H={room_height})")
+        is_live_crawl = str(enable_live_crawl).lower() in ("true", "1", "yes") if enable_live_crawl is not None else True
+        print(f"[Agentic Redesign] Initiating pipeline for: {room_image.filename} (L={room_length}, W={room_width}, H={room_height}, live_crawl={is_live_crawl})")
         result = agent_service.run_redesign_pipeline(
             image_bytes=image_bytes,
             user_prompt=prompt,
@@ -116,7 +118,8 @@ async def redesign_agentic(
             max_budget_inr=budget,
             room_length=room_length,
             room_width=room_width,
-            room_height=room_height
+            room_height=room_height,
+            enable_live_crawl=is_live_crawl
         )
         return JSONResponse(content=result)
 
