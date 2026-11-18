@@ -14,6 +14,7 @@ from catalog_service import catalog_service
 from agent_service import AgentService
 from spatial_tool import spatial_tool
 from mesh_generator import mesh_generator
+from embedding_service import embedding_service
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -92,13 +93,14 @@ def get_product_3d_model(product_id: str):
 
 @app.get("/api/status")
 def get_status():
-    """Returns system status including ZeroGPU connection and Gemini AI key presence."""
+    """Returns system status including ZeroGPU connection, Gemini AI, and CLIP ViT embedding engine."""
     has_gemini = bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))
     return JSONResponse(content={
         "zerogpu_space": SPACE_NAME,
         "has_hf_token": bool(HF_TOKEN),
         "has_gemini_key": has_gemini,
-        "spatial_engine": "gemini-3.8-flash" if has_gemini else "deterministic_spatial_heuristics"
+        "spatial_engine": "gemini-3.8-flash" if has_gemini else "deterministic_spatial_heuristics",
+        "visual_embedding_engine": embedding_service.model_engine
     })
 
 @app.post("/api/redesign_agentic")

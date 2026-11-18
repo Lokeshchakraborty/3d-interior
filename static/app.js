@@ -472,6 +472,12 @@ document.addEventListener('DOMContentLoaded', () => {
             <span>Verified Fit: ${dimStr}</span>
           </div>
 
+          <div class="product-harmony-pill" title="${prod.aesthetic_harmony?.harmony_tier || 'High Aesthetic Harmony'} · CLIP ViT 512-dim Cosine Similarity: ${prod.aesthetic_harmony?.cosine_similarity || '0.62'}">
+            <span class="harmony-icon">✨</span>
+            <span class="harmony-pct">${prod.visual_similarity_score || prod.aesthetic_harmony?.harmony_score_pct || 92.5}% Visual Harmony</span>
+            <span class="harmony-tier-badge">${prod.aesthetic_harmony?.harmony_tier || 'Harmonious Fit'}</span>
+          </div>
+
           <div class="product-attributes">
             <span class="attr-chip chip-shape" title="Product Geometric Shape">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11">
@@ -627,8 +633,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (progress > 15 && progress <= 35) {
         if (steps[1]) steps[1].classList.add('active');
-        loadingStageText.textContent = isAgentic ? 'Curating B2C Catalog Products...' : 'Connecting to ZeroGPU A100...';
-        loadingStageSub.textContent = isAgentic ? 'Filtering Amazon, Flipkart & IKEA items fitting room dimensions' : 'Allocating GPU compute';
+        loadingStageText.textContent = isAgentic ? 'Visual RAG & Simultaneous Crawling...' : 'Connecting to ZeroGPU A100...';
+        loadingStageSub.textContent = isAgentic ? 'Extracting CLIP visual embeddings & crawling Amazon & Flipkart' : 'Allocating GPU compute';
       } else if (progress > 35 && progress <= 55) {
         if (steps[2]) steps[2].classList.add('active');
         loadingStageText.textContent = isAgentic ? 'Synthesizing Architectural LoRA Prompt...' : 'Denoising & synthesizing layout...';

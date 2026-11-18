@@ -489,10 +489,12 @@ class CatalogService:
         self,
         style: str = "scandinavian",
         spatial_zones: Optional[Dict[str, Any]] = None,
-        max_budget_inr: Optional[int] = None
+        max_budget_inr: Optional[int] = None,
+        room_image: Optional[Any] = None
     ) -> List[Dict[str, Any]]:
         """
-        Curates a harmonious ensemble of real furniture for the room based on spatial zone boundaries.
+        Curates a harmonious ensemble of real furniture for the room based on spatial zone boundaries
+        and Visual RAG image embedding cosine similarity against the user's uploaded room image.
         Returns a list of items: sofa, coffee_table, accent_chair, floor_lamp, and rug.
         """
         zones = spatial_zones or {}
@@ -502,6 +504,19 @@ class CatalogService:
         lamp_zone = zones.get("lamp_zone", {})
         rug_zone = zones.get("rug_zone", {})
 
+        def _select_best_match(candidates: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+            if not candidates:
+                return None
+            if not room_image:
+                return candidates[0]
+            try:
+                from embedding_service import embedding_service
+                ranked = embedding_service.rank_products_by_aesthetic_harmony(room_image, candidates)
+                return ranked[0] if ranked else candidates[0]
+            except Exception as emb_err:
+                print(f"[CatalogService] Visual embedding ranking fallback: {emb_err}")
+                return candidates[0]
+
         selected = []
 
         # 1. Main Seating / Sofa
@@ -510,10 +525,11 @@ class CatalogService:
             style=style,
             max_width_in=sofa_zone.get("max_width_in", 92.0),
             max_depth_in=sofa_zone.get("max_depth_in", 42.0),
-            limit=2
+            limit=4
         )
-        if sofas:
-            selected.append(sofas[0])
+        best_sofa = _select_best_match(sofas)
+        if best_sofa:
+            selected.append(best_sofa)
 
         # 2. Coffee Table
         tables = self.search_products(
@@ -521,10 +537,11 @@ class CatalogService:
             style=style,
             max_width_in=table_zone.get("max_width_in", 48.0),
             max_depth_in=table_zone.get("max_depth_in", 32.0),
-            limit=2
+            limit=4
         )
-        if tables:
-            selected.append(tables[0])
+        best_table = _select_best_match(tables)
+        if best_table:
+            selected.append(best_table)
 
         # 3. Accent Chair
         chairs = self.search_products(
@@ -532,30 +549,33 @@ class CatalogService:
             style=style,
             max_width_in=accent_zone.get("max_width_in", 36.0),
             max_depth_in=accent_zone.get("max_depth_in", 36.0),
-            limit=2
+            limit=4
         )
-        if chairs:
-            selected.append(chairs[0])
+        best_chair = _select_best_match(chairs)
+        if best_chair:
+            selected.append(best_chair)
 
         # 4. Floor Lamp
         lamps = self.search_products(
             category="floor_lamp",
             style=style,
             max_height_in=lamp_zone.get("max_height_in", 84.0),
-            limit=2
+            limit=4
         )
-        if lamps:
-            selected.append(lamps[0])
+        best_lamp = _select_best_match(lamps)
+        if best_lamp:
+            selected.append(best_lamp)
 
         # 5. Area Rug
         rugs = self.search_products(
             category="rug",
             style=style,
             max_width_in=rug_zone.get("max_width_in", 100.0),
-            limit=2
+            limit=4
         )
-        if rugs:
-            selected.append(rugs[0])
+        best_rug = _select_best_match(rugs)
+        if best_rug:
+            selected.append(best_rug)
 
         return selected
 
