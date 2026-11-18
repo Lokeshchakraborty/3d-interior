@@ -9,14 +9,14 @@ export default function VisualStage({
   setHoveredProductId,
   onSelectProduct
 }) {
-  const [activeTab, setActiveTab] = useState('matched'); // 'matched' | '3d' | 'after' | 'split'
+  const [activeTab, setActiveTab] = useState('after'); // Default to 'after' (AI Ambiance)
 
   const matchedUrl = data?.matched_image_url;
   const afterUrl = data?.image_url;
   const products = data?.products || [];
 
   const handleDownload = () => {
-    const src = activeTab === 'matched' ? matchedUrl : afterUrl;
+    const src = activeTab === 'matched' ? (matchedUrl || afterUrl) : (afterUrl || matchedUrl);
     if (!src) return;
     const a = document.createElement('a');
     a.href = src;
@@ -29,29 +29,43 @@ export default function VisualStage({
     if (el?.requestFullscreen) el.requestFullscreen();
   };
 
+  const renderHotspots = () => (
+    <div className="hotspot-layer">
+      {products.map((prod, idx) => {
+        const hs = prod.hotspot || {};
+        const x = Math.min(Math.max(hs.x_pct || 50, 8), 92);
+        const y = Math.min(Math.max(hs.y_pct || 50, 12), 90);
+        const isHovered = hoveredProductId === prod.id;
+
+        return (
+          <div
+            key={prod.id || idx}
+            className={`hotspot-pin ${isHovered ? 'active' : ''}`}
+            style={{ left: `${x}%`, top: `${y}%` }}
+            onMouseEnter={() => setHoveredProductId(prod.id)}
+            onMouseLeave={() => setHoveredProductId(null)}
+            onClick={() => onSelectProduct?.(prod)}
+          >
+            <div className="pin-circle">
+              <span>{idx + 1}</span>
+              <span className="pin-glow"></span>
+            </div>
+            <div className="pin-popup">
+              <strong>{prod.store} · {prod.title?.slice(0, 24)}...</strong>
+              <span className="popup-specs">₹{prod.price_inr?.toLocaleString('en-IN')} · {prod.dimensions?.width_in}"W × {prod.dimensions?.depth_in}"D</span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div className="visual-stage-card">
-      {/* View Switcher Tabs Header */}
+      {/* View Switcher Tabs Header: AI Ambiance First & Default */}
       <div className="stage-header">
         <div className="tab-pill-group">
-          <button
-            type="button"
-            className={`tab-pill ${activeTab === 'matched' ? 'active' : ''}`}
-            onClick={() => setActiveTab('matched')}
-          >
-            <Target size={14} className="text-cyan-400" />
-            <span>Exact Match (100% Real)</span>
-          </button>
-
-          <button
-            type="button"
-            className={`tab-pill ${activeTab === '3d' ? 'active' : ''}`}
-            onClick={() => setActiveTab('3d')}
-          >
-            <Box size={14} className="text-emerald-400" />
-            <span>3D WebGL Stager</span>
-          </button>
-
+          {/* 1. AI Ambiance (Default & First) */}
           <button
             type="button"
             className={`tab-pill ${activeTab === 'after' ? 'active' : ''}`}
@@ -61,6 +75,27 @@ export default function VisualStage({
             <span>AI Ambiance</span>
           </button>
 
+          {/* 2. Exact Match (100% Real Packshots) */}
+          <button
+            type="button"
+            className={`tab-pill ${activeTab === 'matched' ? 'active' : ''}`}
+            onClick={() => setActiveTab('matched')}
+          >
+            <Target size={14} className="text-cyan-400" />
+            <span>Exact Match (100% Real)</span>
+          </button>
+
+          {/* 3. 3D WebGL Stager */}
+          <button
+            type="button"
+            className={`tab-pill ${activeTab === '3d' ? 'active' : ''}`}
+            onClick={() => setActiveTab('3d')}
+          >
+            <Box size={14} className="text-emerald-400" />
+            <span>3D WebGL Stager</span>
+          </button>
+
+          {/* 4. Side-by-Side */}
           <button
             type="button"
             className={`tab-pill ${activeTab === 'split' ? 'active' : ''}`}
@@ -81,62 +116,35 @@ export default function VisualStage({
         </div>
       </div>
 
-      {/* Main Visual Viewport */}
+      {/* Main Visual Viewport (Uncropped & Fully Visible) */}
       <div className="visual-viewport" id="visual-viewport-container">
-        {/* 1. Exact Match View */}
+        {/* 1. AI Diffusion Ambiance View (First & Default) */}
+        {activeTab === 'after' && (
+          <div className="image-viewport">
+            <img src={afterUrl || matchedUrl} alt="AI Diffusion Ambiance" className="stage-image" />
+            {renderHotspots()}
+            <div className="viewport-badge badge-diffusion">
+              {data?.zerogpu_notice ? 'ZeroGPU Quota Limited (Ambient Fallback)' : 'FLUX AI Concept Ambiance'}
+            </div>
+          </div>
+        )}
+
+        {/* 2. Exact Match View */}
         {activeTab === 'matched' && (
           <div className="image-viewport">
             <img src={matchedUrl || afterUrl} alt="Exact Match Room" className="stage-image" />
-            {/* Hotspot Pins */}
-            <div className="hotspot-layer">
-              {products.map((prod, idx) => {
-                const hs = prod.hotspot || {};
-                const x = Math.min(Math.max(hs.x_pct || 50, 10), 90);
-                const y = Math.min(Math.max(hs.y_pct || 50, 15), 90);
-                const isHovered = hoveredProductId === prod.id;
-
-                return (
-                  <div
-                    key={prod.id}
-                    className={`hotspot-pin ${isHovered ? 'active' : ''}`}
-                    style={{ left: `${x}%`, top: `${y}%` }}
-                    onMouseEnter={() => setHoveredProductId(prod.id)}
-                    onMouseLeave={() => setHoveredProductId(null)}
-                    onClick={() => onSelectProduct?.(prod)}
-                  >
-                    <div className="pin-circle">
-                      <span>{idx + 1}</span>
-                      <span className="pin-glow"></span>
-                    </div>
-                    <div className="pin-popup">
-                      <strong>{prod.store} · {prod.title?.slice(0, 24)}...</strong>
-                      <span className="popup-specs">₹{prod.price_inr?.toLocaleString('en-IN')} · {prod.dimensions?.width_in}"W × {prod.dimensions?.depth_in}"D</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            {renderHotspots()}
             <div className="viewport-badge badge-matched">Exact B2C Match (Real Packshots)</div>
           </div>
         )}
 
-        {/* 2. Three.js 3D WebGL Viewport */}
+        {/* 3. Three.js 3D WebGL Viewport */}
         {activeTab === '3d' && (
           <ThreeStage
             products={products}
             roomImage={beforeImage}
             onSelectProduct={onSelectProduct}
           />
-        )}
-
-        {/* 3. AI Diffusion Ambiance View */}
-        {activeTab === 'after' && (
-          <div className="image-viewport">
-            <img src={afterUrl} alt="AI Diffusion Ambiance" className="stage-image" />
-            <div className="viewport-badge badge-diffusion">
-              {data?.zerogpu_notice ? 'ZeroGPU Quota Limited (Ambient Fallback)' : 'FLUX AI Concept Ambiance'}
-            </div>
-          </div>
         )}
 
         {/* 4. Side-by-Side Split View */}
@@ -148,7 +156,7 @@ export default function VisualStage({
             </div>
             <div className="split-half">
               <span className="split-tag">After (Precision Redesign)</span>
-              <img src={matchedUrl || afterUrl} alt="After" className="split-img" />
+              <img src={afterUrl || matchedUrl} alt="After" className="split-img" />
             </div>
           </div>
         )}
