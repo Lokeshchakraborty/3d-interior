@@ -70,6 +70,7 @@ Unlike conventional generative interior apps that hallucinate random, unpurchasa
 
 ## Features
 
+- **Modern React & Three.js 3D WebGL Frontend (`frontend/`)**: Modular, clean, and functional React UI built with Vite, Lucide icons, and an interactive Three.js 3D WebGL stager supporting OrbitControls, directional lighting, soft shadow planes, model drag-and-drop across the floor plan, 45° rotation, and synchronized hover pins.
 - **LangGraph StateGraph v1.2**: 5-node autonomous pipeline with conditional state routing and error fallbacks.
 - **Simultaneous Playwright Crawler**: Live, concurrent headless browser navigation across **Amazon India** and **Flipkart** to extract real-time prices, specifications, and packshots.
 - **Ground-Truth Dimensional Calibration**: Input room Length, Width, and Ceiling Height (ft) to eliminate scale hallucinations and preserve 32" circulation walkways.
@@ -112,25 +113,47 @@ GEMINI_API_KEY=your_gemini_api_key_here
 ```bash
 python server.py
 ```
-Open **[http://localhost:5000](http://localhost:5000)** in your browser.
+Open **[http://localhost:5000](http://localhost:5000)** in your browser. The compiled React UI from `frontend/dist` is served automatically. (The legacy interface remains accessible at `/legacy`).
+
+### 4. Optional: Frontend Development (React + Vite)
+If you wish to modify or develop the React interface with hot module reloading (HMR):
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Open **[http://localhost:3000](http://localhost:3000)** (API requests are automatically proxied to FastAPI on port 5000). To rebuild for production:
+```bash
+npm run build
+```
 
 ---
 
 ## Clean Project Structure
 
 ```
-├── server.py                              # FastAPI server with Agentic & Direct endpoints
+├── frontend/                              # Modern React + Vite + Three.js application
+│   ├── src/
+│   │   ├── components/                    # Modular UI components (Header, RoomInput, VisualStage, ThreeStage, SpatialCard, ProductList)
+│   │   ├── App.jsx                        # Master state & layout orchestrator
+│   │   ├── App.css                        # Modern architectural UI styling
+│   │   └── main.jsx                       # React entry point
+│   ├── dist/                              # Production build served by FastAPI at http://localhost:5000
+│   ├── package.json                       # React dependencies (three, lucide-react)
+│   └── vite.config.js                     # Vite configuration with /api proxy to FastAPI
+├── server.py                              # FastAPI server with React SPA & Agentic endpoints
 ├── langgraph_agent.py                     # Compiled LangGraph StateGraph (5 nodes)
 ├── live_crawler.py                        # Simultaneous Playwright crawler (Amazon & Flipkart)
 ├── agent_service.py                       # High-level orchestrator calling LangGraph StateGraph
 ├── spatial_tool.py                        # Spatial perception & ground-truth room calculation
 ├── catalog_service.py                     # B2C furniture catalog (Amazon, Flipkart, IKEA)
 ├── product_matcher.py                     # Perspective compositor with elliptical drop shadows
+├── mesh_generator.py                      # 3D GLB mesh generation for Three.js WebGL stager
 ├── templates/
-│   └── index.html                         # Modern UI with live crawler toggle & hotspots
+│   └── index.html                         # Legacy HTML template (available at /legacy)
 ├── static/
-│   ├── style.css                          # Modern dark architectural UI styling
-│   └── app.js                             # Client-side agentic pipeline & view switcher
+│   ├── style.css                          # Legacy UI styling
+│   └── app.js                             # Legacy client script
 ├── text_redesign.py                       # Standalone Python CLI script for generation
 ├── prepare_dataset.py                     # LoRA dataset preparation & cropping pipeline
 ├── generate_project_pdf.py                # Academic project report PDF generator

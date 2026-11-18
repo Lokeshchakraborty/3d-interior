@@ -10,7 +10,10 @@ import math
 from typing import Dict, Any, Optional
 import numpy as np
 from PIL import Image
-import trimesh
+try:
+    import trimesh
+except ImportError:
+    trimesh = None
 
 class MeshGenerator:
     def __init__(self):
@@ -31,6 +34,8 @@ class MeshGenerator:
         Synthesizes a 3D textured mesh scaled to exact physical metric dimensions (meters).
         1 inch = 0.0254 meters.
         """
+        if trimesh is None:
+            return b""
         dim = product.get("dimensions", {})
         # Convert dimensions to meters (fallback: realistic defaults)
         w_m = float(dim.get("width_in", 48.0)) * 0.0254

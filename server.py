@@ -25,6 +25,10 @@ app = FastAPI(
 # Mount static files directory
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# Mount React frontend static assets if built
+if os.path.exists("frontend/dist/assets"):
+    app.mount("/assets", StaticFiles(directory="frontend/dist/assets"), name="frontend-assets")
+
 # Configuration
 SPACE_NAME = "lokesh006/room-design-api"
 
@@ -61,6 +65,14 @@ agent_service = AgentService(gradio_client_getter=get_client)
 
 @app.get("/", response_class=HTMLResponse)
 def index():
+    """Serves the modern React SPA if built in frontend/dist, else falls back to templates/index.html."""
+    if os.path.exists("frontend/dist/index.html"):
+        return FileResponse("frontend/dist/index.html")
+    return FileResponse("templates/index.html")
+
+@app.get("/legacy", response_class=HTMLResponse)
+def legacy_index():
+    """Serves the legacy HTML/Vanilla JS interface for backwards compatibility."""
     return FileResponse("templates/index.html")
 
 @app.get("/api/catalog")
