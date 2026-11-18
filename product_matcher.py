@@ -265,41 +265,56 @@ class ProductMatcher:
 
                 # Rug special handling: floor perspective foreshortening
                 if cat == "rug":
-                    flat_h = int(target_w * 0.45)
+                    flat_h = int(target_w * 0.42)
                     rendered_prod = self.perspective_warp_rug(harmonized_cutout, target_w, flat_h)
                     prod_x = center_x - (target_w // 2)
                     prod_y = center_y - (flat_h // 2)
                     composite.paste(rendered_prod, (prod_x, prod_y), rendered_prod)
                 else:
-                    # Standing furniture: vanishing-point perspective homography
+                    # Standing furniture: anchor legs/base directly to the floor contact line (center_y)
                     rendered_prod = self.perspective_warp_standing(harmonized_cutout, target_w, target_h, y_pct)
                     prod_x = center_x - (target_w // 2)
-                    prod_y = center_y - (target_h // 2)
+                    prod_y = center_y - target_h  # Base/feet firmly placed at floor line center_y
 
-                    # Tier 1: Contact Ambient Occlusion Shadow (tight dark line directly under base/legs)
+                    # Clamp bounds to prevent overflow
+                    if prod_y < 0:
+                        prod_y = 0
+                    if prod_x < 0:
+                        prod_x = 0
+                    elif prod_x + target_w > room_w:
+                        prod_x = room_w - target_w
+
+                    # Tier 1: Contact Ambient Occlusion Shadow (tight dark line directly under base/legs at floor line)
                     ao_w = int(target_w * 0.94)
                     ao_h = max(8, int(target_h * 0.09))
                     ao_mask = Image.new("RGBA", (ao_w, ao_h), (0, 0, 0, 0))
                     d_ao = ImageDraw.Draw(ao_mask)
-                    d_ao.ellipse([0, 0, ao_w, ao_h], fill=(0, 0, 0, 175))
+                    d_ao.ellipse([0, 0, ao_w, ao_h], fill=(0, 0, 0, 185))
                     ao_blur = ao_mask.filter(ImageFilter.GaussianBlur(radius=max(2, int(ao_h * 0.3))))
                     ao_x = center_x - (ao_w // 2)
-                    ao_y = prod_y + target_h - int(ao_h * 0.70)
+                    ao_y = center_y - int(ao_h * 0.70)
                     composite.paste(ao_blur, (ao_x, ao_y), ao_blur)
 
-                    # Tier 2: Directional Soft Floor Shadow (aligned with natural light source)
+                    # Tier 2: Directional Soft Floor Shadow (aligned with natural light source at floor line)
                     sh_w = int(target_w * 1.15)
-                    sh_h = max(14, int(target_h * 0.24))
+                    sh_h = max(14, int(target_h * 0.22))
                     sh_mask = Image.new("RGBA", (sh_w, sh_h), (0, 0, 0, 0))
                     d_sh = ImageDraw.Draw(sh_mask)
-                    d_sh.ellipse([0, 0, sh_w, sh_h], fill=(0, 0, 0, 100))
+                    d_sh.ellipse([0, 0, sh_w, sh_h], fill=(0, 0, 0, 110))
                     sh_blur = sh_mask.filter(ImageFilter.GaussianBlur(radius=max(3, int(sh_h * 0.4))))
                     sh_x = center_x - (sh_w // 2) + int(target_w * shadow_skew_x)
-                    sh_y = prod_y + target_h - int(sh_h * 0.50)
+                    sh_y = center_y - int(sh_h * 0.50)
                     composite.paste(sh_blur, (sh_x, sh_y), sh_blur)
 
                     # Paste harmonized product cutout with natural alpha transparency
                     composite.paste(rendered_prod, (prod_x, prod_y), rendered_prod)
+
+                # Update interactive hotspot to center of the product on screen
+                hotspot_center_y_pct = round(((prod_y + target_h * 0.45) / room_h) * 100, 1)
+                hotspot_center_x_pct = round((center_x / room_w) * 100, 1)
+                if "hotspot" in prod:
+                    prod["hotspot"]["x_pct"] = hotspot_center_x_pct
+                    prod["hotspot"]["y_pct"] = hotspot_center_y_pct
 
                 # Store staging coordinate percentages for interactive frontend stager
                 prod["stage_coords"] = {

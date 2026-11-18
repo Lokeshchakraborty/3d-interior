@@ -2,6 +2,24 @@ import os
 import io
 import base64
 import tempfile
+from pathlib import Path
+
+# Load environment variables from .env file FIRST before any local modules are imported
+env_file = Path(__file__).resolve().parent / ".env"
+if env_file.exists():
+    try:
+        with open(env_file, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, val = line.split("=", 1)
+                    key = key.strip()
+                    val = val.strip().strip("'\"")
+                    if key:
+                        os.environ[key] = val
+    except Exception as e:
+        print(f"Notice: Failed to parse .env file: {e}")
+
 import uvicorn
 from typing import Optional
 from fastapi import FastAPI, UploadFile, File, Form
@@ -31,21 +49,6 @@ if os.path.exists("frontend/dist/assets"):
 
 # Configuration
 SPACE_NAME = "lokesh006/room-design-api"
-
-# Load environment variables from .env file
-if os.path.exists(".env"):
-    try:
-        with open(".env", "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#") and "=" in line:
-                    key, val = line.split("=", 1)
-                    key = key.strip()
-                    val = val.strip().strip("'\"")
-                    if key:
-                        os.environ[key] = val
-    except Exception as e:
-        print(f"Notice: Failed to parse .env file: {e}")
 
 HF_TOKEN = os.getenv("HF_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
@@ -116,7 +119,7 @@ def get_status():
     })
 
 @app.post("/api/redesign_agentic")
-async def redesign_agentic(
+def redesign_agentic(
     room_image: UploadFile = File(...),
     prompt: str = Form("Scandinavian living room with light oak furniture, minimalist decor, neutral linen couch"),
     style: Optional[str] = Form(None),
@@ -138,7 +141,7 @@ async def redesign_agentic(
         if not room_image.filename:
             return JSONResponse(status_code=400, content={"success": False, "error": "No image file selected"})
 
-        image_bytes = await room_image.read()
+        image_bytes = room_image.file.read()
         if not image_bytes:
             return JSONResponse(status_code=400, content={"success": False, "error": "Image file is empty"})
 

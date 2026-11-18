@@ -65,6 +65,17 @@ class SpatialTool:
         user_dims = user_dimensions or {}
         has_user_dims = any(user_dims.get(k) for k in ["length_ft", "width_ft", "height_ft"])
 
+        # Check / lazy-initialize Gemini client if not yet loaded
+        if not self.client:
+            self.api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+            if self.api_key:
+                try:
+                    from google import genai
+                    self.client = genai.Client(api_key=self.api_key)
+                    print("Gemini Client initialized for Spatial Vision Analysis.")
+                except Exception as e:
+                    print(f"Notice: Failed to initialize Gemini Client: {e}")
+
         # 1. Attempt Gemini Multimodal Vision Reasoning if client is available
         if self.client:
             try:
@@ -225,7 +236,7 @@ User hint / design goal: {user_hint or 'Modern interior redesign'}
                 "max_height_in": sofa_max_height,
                 "suggested_category": "sofa",
                 "hotspot_x_pct": 48.0,
-                "hotspot_y_pct": 62.0,
+                "hotspot_y_pct": 68.0,
                 "description": f"Main seating zone sized up to {sofa_max_width}\"W to maintain minimum 32\" perimeter walkway across the {width_ft}' wall."
             },
             "table_zone": {
@@ -235,7 +246,7 @@ User hint / design goal: {user_hint or 'Modern interior redesign'}
                 "max_height_in": table_max_height,
                 "suggested_category": "coffee_table",
                 "hotspot_x_pct": 50.0,
-                "hotspot_y_pct": 76.0,
+                "hotspot_y_pct": 82.0,
                 "description": f"Central coffee table bounded to {table_max_width}\"W preserving 18\" reach buffer from sofa."
             },
             "accent_zone": {
@@ -244,8 +255,8 @@ User hint / design goal: {user_hint or 'Modern interior redesign'}
                 "max_depth_in": accent_max_depth,
                 "max_height_in": accent_max_height,
                 "suggested_category": "accent_chair",
-                "hotspot_x_pct": 22.0,
-                "hotspot_y_pct": 68.0,
+                "hotspot_x_pct": 24.0,
+                "hotspot_y_pct": 74.0,
                 "description": f"Accent seating corner bounded to {accent_max_width}\"W for natural conversational flow."
             },
             "lamp_zone": {
@@ -255,7 +266,7 @@ User hint / design goal: {user_hint or 'Modern interior redesign'}
                 "max_height_in": lamp_max_height,
                 "suggested_category": "floor_lamp",
                 "hotspot_x_pct": 82.0,
-                "hotspot_y_pct": 52.0,
+                "hotspot_y_pct": 70.0,
                 "description": f"Vertical lighting corner tailored to {ceiling_ft}' ceiling height (max {lamp_max_height}\"H)."
             },
             "rug_zone": {
@@ -265,7 +276,7 @@ User hint / design goal: {user_hint or 'Modern interior redesign'}
                 "max_height_in": 1.5,
                 "suggested_category": "rug",
                 "hotspot_x_pct": 50.0,
-                "hotspot_y_pct": 84.0,
+                "hotspot_y_pct": 76.0,
                 "description": f"Proportioned area rug ({rug_max_width}\"W x {rug_max_depth}\"D) anchoring the seating island on the {sqft} sq.ft floor."
             }
         }

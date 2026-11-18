@@ -258,27 +258,26 @@ def exact_product_matching_node(state: RedesignState) -> Dict[str, Any]:
         products_with_hotspots.append(p_copy)
         total_cost += p.get("price_inr", 0)
 
-    # Read bytes of the generated redesign (or fallback to original input)
-    result_path = state.get("zerogpu_result_path")
-    if result_path and os.path.exists(result_path):
-        with open(result_path, "rb") as f:
-            rendered_bytes = f.read()
-    else:
+    # CRITICAL: Always use the user's authentic uploaded room image (state["image_bytes"]
+    # or state["temp_input_path"]) so that 100% of the real house structure (walls, windows,
+    # doors, ceiling, floor) is completely preserved without any AI architectural hallucination!
+    real_room_bytes = state.get("image_bytes")
+    if not real_room_bytes and os.path.exists(state.get("temp_input_path", "")):
         with open(state["temp_input_path"], "rb") as f:
-            rendered_bytes = f.read()
+            real_room_bytes = f.read()
 
-    # Generate exact product placement composite
+    # Generate exact product placement composite directly onto user's real room
     matched_image_url = product_matcher.composite_products_onto_room(
-        room_image_bytes=rendered_bytes,
+        room_image_bytes=real_room_bytes,
         products=products_with_hotspots,
         spatial_plan=state["spatial_plan"]
     )
 
-    # Compute match metrics with visual embedding harmony
+    # Compute match metrics with visual embedding harmony against authentic room
     enriched_products = product_matcher.compute_match_metrics(
         products=products_with_hotspots,
         spatial_plan=state["spatial_plan"],
-        room_image_bytes=rendered_bytes
+        room_image_bytes=real_room_bytes
     )
 
     return {
