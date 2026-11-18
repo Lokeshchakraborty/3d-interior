@@ -80,10 +80,21 @@ export default function App() {
         body: formData
       });
 
-      const data = await response.json();
       clearInterval(interval);
 
-      if (!response.ok || !data.success) {
+      if (!response.ok) {
+        let errMsg = `Server returned status ${response.status}`;
+        try {
+          const errData = await response.json();
+          if (errData.error) errMsg = errData.error;
+        } catch (_) {
+          errMsg = 'Cannot connect to backend server. Make sure "python server.py" is running on port 5000.';
+        }
+        throw new Error(errMsg);
+      }
+
+      const data = await response.json();
+      if (!data.success) {
         throw new Error(data.error || 'Server redesign process failed.');
       }
 
