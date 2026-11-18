@@ -150,16 +150,16 @@ export default function VisualStage({
           />
         )}
 
-        {/* 4. Side-by-Side Split View */}
+        {/* 4. Side-by-Side Split View: Compare Original vs AI Concept Ambiance */}
         {activeTab === 'split' && (
           <div className="split-viewport">
             <div className="split-half">
-              <span className="split-tag">Before (Empty Room)</span>
-              <img src={beforeImage} alt="Before" className="split-img" />
+              <span className="split-tag">Before (Original Room)</span>
+              <img src={beforeImage} alt="Before (Original Room)" className="split-img" />
             </div>
             <div className="split-half">
-              <span className="split-tag">After (Furnished Real Room)</span>
-              <img src={matchedUrl || beforeImage} alt="Furnished Real Room" className="split-img" />
+              <span className="split-tag">After (AI Concept Ambiance)</span>
+              <img src={afterUrl || matchedUrl} alt="After (AI Concept Ambiance)" className="split-img" />
             </div>
           </div>
         )}
