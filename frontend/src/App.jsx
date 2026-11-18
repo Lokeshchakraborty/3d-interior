@@ -88,10 +88,17 @@ export default function App() {
       }
 
       setResultData(data);
-      showToast(
-        `Precision redesign ready! Placed ${data.products?.length || 0} real dimension-verified products.`,
-        'success'
-      );
+      if (data.zerogpu_notice) {
+        showToast(
+          `Placed ${data.products?.length || 0} real products! Note: ${data.zerogpu_notice}`,
+          'warning'
+        );
+      } else {
+        showToast(
+          `Precision redesign ready! Placed ${data.products?.length || 0} real dimension-verified products.`,
+          'success'
+        );
+      }
     } catch (err) {
       clearInterval(interval);
       console.error(err);

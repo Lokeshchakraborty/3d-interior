@@ -103,6 +103,7 @@ class AgentService:
                 "agent_engine": final_state.get("agent_engine", "gemini-3.8-flash"),
                 "dimension_source": final_state.get("dimension_source", "aspect_ratio_estimation"),
                 "is_ground_truth_dimensions": final_state.get("is_ground_truth_dimensions", False),
+                "zerogpu_notice": final_state.get("zerogpu_notice"),
                 "orchestration_framework": "LangGraph v1.2 StateGraph"
             }
 
@@ -112,7 +113,7 @@ class AgentService:
                     os.remove(temp_input_path)
                 except Exception:
                     pass
-            if zerogpu_result_path and os.path.exists(zerogpu_result_path):
+            if zerogpu_result_path and zerogpu_result_path != temp_input_path and os.path.exists(zerogpu_result_path):
                 try:
                     os.remove(zerogpu_result_path)
                 except Exception:

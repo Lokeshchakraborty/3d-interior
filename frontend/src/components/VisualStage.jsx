@@ -133,7 +133,9 @@ export default function VisualStage({
         {activeTab === 'after' && (
           <div className="image-viewport">
             <img src={afterUrl} alt="AI Diffusion Ambiance" className="stage-image" />
-            <div className="viewport-badge badge-diffusion">FLUX AI Concept Ambiance</div>
+            <div className="viewport-badge badge-diffusion">
+              {data?.zerogpu_notice ? 'ZeroGPU Quota Limited (Ambient Fallback)' : 'FLUX AI Concept Ambiance'}
+            </div>
           </div>
         )}
 
@@ -154,3 +156,4 @@ export default function VisualStage({
     </div>
   );
 }
+

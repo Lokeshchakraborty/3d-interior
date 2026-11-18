@@ -281,3 +281,4 @@ export default function ThreeStage({ products = [], roomImage, onSelectProduct }
     </div>
   );
 }
+

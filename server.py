@@ -41,8 +41,8 @@ if os.path.exists(".env"):
                 if line and not line.startswith("#") and "=" in line:
                     key, val = line.split("=", 1)
                     key = key.strip()
-                    val = val.strip()
-                    if key and not os.getenv(key):
+                    val = val.strip().strip("'\"")
+                    if key:
                         os.environ[key] = val
     except Exception as e:
         print(f"Notice: Failed to parse .env file: {e}")

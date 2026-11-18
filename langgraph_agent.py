@@ -52,6 +52,7 @@ class RedesignState(TypedDict):
     agent_engine: str
     dimension_source: str
     is_ground_truth_dimensions: bool
+    zerogpu_notice: Optional[str]
     error: Optional[str]
 
 # ==================== LANGGRAPH NODES ====================
@@ -218,29 +219,42 @@ def zerogpu_synthesis_node(state: RedesignState) -> Dict[str, Any]:
     Node 4: Exemplar & ControlNet Inpainting Synthesis
     Sends floor-conditioned room geometry to ZeroGPU so ControlNet preserves
     exact furniture footprints instead of hallucinating random items in empty space.
+    Gracefully falls back to high-fidelity direct packshot staging if ZeroGPU quota is exhausted.
     """
     print("[LangGraph: Node 4] Invoking ZeroGPU ControlNet / Inpainting Visual Synthesis API...")
     gradio_client = state["gradio_client"]
     from gradio_client import handle_file
 
     input_img_path = state["temp_input_path"]
+    quota_notice = None
 
-    result_path = gradio_client.predict(
-        room_image=handle_file(input_img_path),
-        prompt=state["conditioned_prompt"],
-        api_name="/redesign"
-    )
+    try:
+        result_path = gradio_client.predict(
+            room_image=handle_file(input_img_path),
+            prompt=state["conditioned_prompt"],
+            api_name="/redesign"
+        )
 
-    buffer = io.BytesIO()
-    with Image.open(result_path) as img:
-        img.convert("RGB").save(buffer, format="JPEG", quality=95)
-    buffer.seek(0)
-    b64_data = base64.b64encode(buffer.getvalue()).decode("utf-8")
-    image_url = f"data:image/jpeg;base64,{b64_data}"
+        buffer = io.BytesIO()
+        with Image.open(result_path) as img:
+            img.convert("RGB").save(buffer, format="JPEG", quality=95)
+        buffer.seek(0)
+        b64_data = base64.b64encode(buffer.getvalue()).decode("utf-8")
+        image_url = f"data:image/jpeg;base64,{b64_data}"
+    except Exception as exc:
+        err_str = str(exc)
+        print(f"[LangGraph: Node 4 Warning] ZeroGPU visual synthesis unavailable: {err_str}")
+        print("[LangGraph: Node 4 Fallback] Engaging 100% Precision Packshot Compositing & 3D Stager directly.")
+        result_path = input_img_path
+        quota_notice = "ZeroGPU runs limit reached. Authenticate with a Hugging Face token for more quota." if "ZeroGPU" in err_str or "quota" in err_str.lower() else err_str
+        with open(input_img_path, "rb") as f:
+            b64_data = base64.b64encode(f.read()).decode("utf-8")
+        image_url = f"data:image/jpeg;base64,{b64_data}"
 
     return {
         "zerogpu_result_path": result_path,
-        "image_url": image_url
+        "image_url": image_url,
+        "zerogpu_notice": quota_notice
     }
 
 def exact_product_matching_node(state: RedesignState) -> Dict[str, Any]:
@@ -276,9 +290,14 @@ def exact_product_matching_node(state: RedesignState) -> Dict[str, Any]:
         products_with_hotspots.append(p_copy)
         total_cost += p.get("price_inr", 0)
 
-    # Read bytes of the generated redesign
-    with open(state["zerogpu_result_path"], "rb") as f:
-        rendered_bytes = f.read()
+    # Read bytes of the generated redesign (or fallback to original input)
+    result_path = state.get("zerogpu_result_path")
+    if result_path and os.path.exists(result_path):
+        with open(result_path, "rb") as f:
+            rendered_bytes = f.read()
+    else:
+        with open(state["temp_input_path"], "rb") as f:
+            rendered_bytes = f.read()
 
     # Generate exact product placement composite
     matched_image_url = product_matcher.composite_products_onto_room(
@@ -298,7 +317,8 @@ def exact_product_matching_node(state: RedesignState) -> Dict[str, Any]:
         "products": enriched_products,
         "matched_image_url": matched_image_url,
         "total_estimated_cost_inr": total_cost,
-        "total_products_count": len(enriched_products)
+        "total_products_count": len(enriched_products),
+        "zerogpu_notice": state.get("zerogpu_notice")
     }
 
 # ==================== COMPILE LANGGRAPH STATE MACHINE ====================
