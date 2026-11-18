@@ -67,9 +67,22 @@ class MeshGenerator:
             mesh = trimesh.creation.box(extents=[w_m, d_m, h_m])
             mesh.apply_translation([0, 0, h_m / 2.0])
 
+        # Standardize Coordinate Axes for Three.js & GLTF (Y-Up, Z-Forward, X-Right)
+        # In parametric creation, Z was height and Y was depth.
+        # Rx(-pi/2) rotates Z to Y; Ry(pi) aligns front face to +Z (towards camera).
+        Rx = trimesh.transformations.rotation_matrix(-np.pi / 2.0, [1, 0, 0])
+        Ry = trimesh.transformations.rotation_matrix(np.pi, [0, 1, 0])
+        M = np.dot(Ry, Rx)
+        mesh.apply_transform(M)
+
+        # Ground-Plane Snapping: ensure the furniture bottom sits precisely at Y = 0 (floor)
+        min_y = float(mesh.bounds[0, 1])
+        if abs(min_y) > 1e-5:
+            mesh.apply_translation([0, -min_y, 0])
+
         # Apply texture from isolated packshot if available
         if cutout_img is not None:
-            self._apply_texture_mapping(mesh, cutout_img)
+            self._apply_texture_mapping(mesh, cutout_img, is_rug=(cat == "rug"))
 
         glb_bytes = mesh.export(file_type="glb")
         return glb_bytes
@@ -191,17 +204,25 @@ class MeshGenerator:
 
         return trimesh.util.concatenate([body] + legs)
 
-    def _apply_texture_mapping(self, mesh: trimesh.Trimesh, img: Image.Image):
-        """Maps packshot texture onto the mesh faces with clean planar UVs."""
+    def _apply_texture_mapping(self, mesh: trimesh.Trimesh, img: Image.Image, is_rug: bool = False):
+        """Maps packshot texture onto the mesh faces with clean planar UVs aligned to Three.js axes."""
         try:
             tex = img.convert("RGBA").resize((512, 512), Image.Resampling.LANCZOS)
             v = mesh.vertices
             uv = np.zeros((len(v), 2), dtype=np.float32)
 
             ptp_x = float(v[:, 0].max() - v[:, 0].min()) or 1.0
-            ptp_z = float(v[:, 2].max() - v[:, 2].min()) or 1.0
-            uv[:, 0] = np.clip((v[:, 0] - v[:, 0].min()) / ptp_x, 0.0, 1.0)
-            uv[:, 1] = np.clip((v[:, 2] - v[:, 2].min()) / ptp_z, 0.0, 1.0)
+
+            if is_rug:
+                # Rugs lie flat on floor: map U to X (width) and V to Z (depth)
+                ptp_z = float(v[:, 2].max() - v[:, 2].min()) or 1.0
+                uv[:, 0] = np.clip((v[:, 0] - v[:, 0].min()) / ptp_x, 0.0, 1.0)
+                uv[:, 1] = np.clip((v[:, 2] - v[:, 2].min()) / ptp_z, 0.0, 1.0)
+            else:
+                # Upright furniture: map front-facing projection: U to X (width) and V to Y (height)
+                ptp_y = float(v[:, 1].max() - v[:, 1].min()) or 1.0
+                uv[:, 0] = np.clip((v[:, 0] - v[:, 0].min()) / ptp_x, 0.0, 1.0)
+                uv[:, 1] = np.clip((v[:, 1] - v[:, 1].min()) / ptp_y, 0.0, 1.0)
 
             material = trimesh.visual.material.PBRMaterial(
                 baseColorTexture=tex,

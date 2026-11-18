@@ -2,13 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { RotateCw, Move, CheckCircle2, Box } from 'lucide-react';
+import { RotateCw, RotateCcw, Move, CheckCircle2, Box } from 'lucide-react';
 
 export default function ThreeStage({ products = [], roomImage, onSelectProduct }) {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
   const [selectedModel, setSelectedModel] = useState(null);
   const [selectedProd, setSelectedProd] = useState(null);
+  const [rotationDeg, setRotationDeg] = useState(0);
   const sceneRef = useRef(null);
   const modelsRef = useRef([]);
 
@@ -98,14 +99,19 @@ export default function ThreeStage({ products = [], roomImage, onSelectProduct }
         modelUrl,
         (gltf) => {
           const root = gltf.scene;
-          root.position.set(posX, 0, posZ);
+          
+          // Compute bounding box and snap bottom strictly to floor plane (Y = 0)
+          const bbox = new THREE.Box3().setFromObject(root);
+          const minY = bbox.min.y;
+          root.position.set(posX, -minY, posZ);
+
           root.traverse((child) => {
             if (child.isMesh) {
               child.castShadow = true;
               child.receiveShadow = true;
             }
           });
-          root.userData = prod;
+          root.userData = { ...prod, initialPos: { x: posX, y: -minY, z: posZ } };
           scene.add(root);
           loadedGroups.push(root);
         },
@@ -113,7 +119,8 @@ export default function ThreeStage({ products = [], roomImage, onSelectProduct }
         () => {
           // Fallback procedural geometry
           const group = new THREE.Group();
-          const geo = prod.category === 'rug' 
+          const isRug = prod.category === 'rug';
+          const geo = isRug 
             ? new THREE.BoxGeometry(wM, 0.015, dM)
             : new THREE.BoxGeometry(wM, hM, dM);
           
@@ -126,12 +133,12 @@ export default function ThreeStage({ products = [], roomImage, onSelectProduct }
           }
 
           const mesh = new THREE.Mesh(geo, mat);
-          mesh.position.y = hM / 2;
+          mesh.position.y = isRug ? 0.0075 : hM / 2;
           mesh.castShadow = true;
           mesh.receiveShadow = true;
           group.add(mesh);
           group.position.set(posX, 0, posZ);
-          group.userData = prod;
+          group.userData = { ...prod, initialPos: { x: posX, y: 0, z: posZ } };
           scene.add(group);
           loadedGroups.push(group);
         }
@@ -164,6 +171,7 @@ export default function ThreeStage({ products = [], roomImage, onSelectProduct }
         dragModel = topGroup;
         setSelectedModel(topGroup);
         setSelectedProd(topGroup.userData);
+        setRotationDeg(Math.round(((topGroup.rotation.y % (Math.PI * 2)) * 180) / Math.PI));
         if (onSelectProduct) onSelectProduct(topGroup.userData);
 
         // Highlight selection helper
@@ -246,7 +254,21 @@ export default function ThreeStage({ products = [], roomImage, onSelectProduct }
 
   const handleRotate = () => {
     if (selectedModel && sceneRef.current) {
-      selectedModel.rotation.y += Math.PI / 4;
+      selectedModel.rotation.y = (selectedModel.rotation.y + Math.PI / 4) % (Math.PI * 2);
+      setRotationDeg(Math.round(((selectedModel.rotation.y) * 180) / Math.PI));
+      const helper = sceneRef.current.getObjectByName('selection-box');
+      if (helper) helper.update();
+    }
+  };
+
+  const handleReset = () => {
+    if (selectedModel && sceneRef.current) {
+      const init = selectedModel.userData?.initialPos;
+      if (init) {
+        selectedModel.position.set(init.x, init.y, init.z);
+      }
+      selectedModel.rotation.y = 0;
+      setRotationDeg(0);
       const helper = sceneRef.current.getObjectByName('selection-box');
       if (helper) helper.update();
     }
@@ -269,12 +291,18 @@ export default function ThreeStage({ products = [], roomImage, onSelectProduct }
               <strong className="hud-title">{selectedProd.store} · {selectedProd.title?.slice(0, 22)}...</strong>
               <span className="hud-dim">
                 {selectedProd.dimensions?.width_in}"W × {selectedProd.dimensions?.depth_in}"D × {selectedProd.dimensions?.height_in}"H
+                {rotationDeg > 0 && <span className="ml-1 text-cyan-400">({rotationDeg}°)</span>}
               </span>
             </div>
-            <button type="button" onClick={handleRotate} className="hud-rotate-btn" title="Rotate 45°">
-              <RotateCw size={14} />
-              <span>Rotate 45°</span>
-            </button>
+            <div className="hud-btn-group">
+              <button type="button" onClick={handleRotate} className="hud-rotate-btn" title="Rotate 45° around floor vertical axis">
+                <RotateCw size={14} />
+                <span>Rotate 45°</span>
+              </button>
+              <button type="button" onClick={handleReset} className="hud-reset-btn" title="Reset Position & Rotation">
+                <RotateCcw size={14} />
+              </button>
+            </div>
           </div>
         )}
       </div>

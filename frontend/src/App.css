@@ -842,6 +842,12 @@
   display: block;
 }
 
+.hud-btn-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .hud-rotate-btn {
   display: inline-flex;
   align-items: center;
@@ -859,6 +865,24 @@
 
 .hud-rotate-btn:hover {
   background: rgba(56, 189, 248, 0.2);
+}
+
+.hud-reset-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.45rem;
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid var(--border);
+  color: #94a3b8;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.hud-reset-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
 }
 
 /* Split Viewport */
