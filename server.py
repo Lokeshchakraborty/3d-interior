@@ -118,20 +118,20 @@ def get_status():
 @app.post("/api/redesign_agentic")
 async def redesign_agentic(
     room_image: UploadFile = File(...),
-    prompt: str = Form("modern_interior, luxury Scandinavian living room with beige linen couch"),
+    prompt: str = Form("Scandinavian living room with light oak furniture, minimalist decor, neutral linen couch"),
     style: Optional[str] = Form(None),
     budget: Optional[int] = Form(None),
     room_length: Optional[float] = Form(None),
     room_width: Optional[float] = Form(None),
     room_height: Optional[float] = Form(None),
-    enable_live_crawl: Optional[str] = Form("true")
+    enable_live_crawl: Optional[str] = Form("false")
 ):
     """
-    Agentic redesign endpoint with Ground-Truth Dimensional Calibration:
+    Agentic redesign endpoint with Ground-Truth Dimensional Calibration & Custom Prompt Conditioning:
     1. Runs spatial perception & room dimension calculation using user Length, Width, Height.
-    2. Curates real dimension-verified products from Amazon/Flipkart/IKEA via Playwright live crawler.
-    3. Synthesizes an architectural prompt describing those exact products.
-    4. Calls ZeroGPU visual generation API.
+    2. Curates real dimension-verified products from Amazon/Flipkart/IKEA matching user prompt keywords and visual harmony.
+    3. Synthesizes an architectural prompt enforcing exact user desires and verified product shapes/colors.
+    4. Calls ZeroGPU visual generation API with automatic graceful fallback.
     5. Returns redesigned image with bill of materials and interactive hotspots.
     """
     try:
@@ -142,8 +142,8 @@ async def redesign_agentic(
         if not image_bytes:
             return JSONResponse(status_code=400, content={"success": False, "error": "Image file is empty"})
 
-        is_live_crawl = str(enable_live_crawl).lower() in ("true", "1", "yes") if enable_live_crawl is not None else True
-        print(f"[Agentic Redesign] Initiating pipeline for: {room_image.filename} (L={room_length}, W={room_width}, H={room_height}, live_crawl={is_live_crawl})")
+        is_live_crawl = False
+        print(f"[Agentic Redesign] Initiating pipeline for: {room_image.filename} (L={room_length}, W={room_width}, H={room_height}, Prompt='{prompt[:40]}...')")
         result = agent_service.run_redesign_pipeline(
             image_bytes=image_bytes,
             user_prompt=prompt,

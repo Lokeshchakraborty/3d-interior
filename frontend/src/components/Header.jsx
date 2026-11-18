@@ -25,7 +25,7 @@ export default function Header({ status }) {
         </div>
         <div className="status-pill">
           <span className="pill-dot dot-amber"></span>
-          <span className="pill-label">⚡ Live Playwright Active</span>
+          <span className="pill-label">50+ Real B2C Products</span>
         </div>
       </div>
     </header>

@@ -15,9 +15,8 @@ export default function App() {
   const [width, setWidth] = useState(14.0);
   const [height, setHeight] = useState(9.5);
   const [selectedStyle, setSelectedStyle] = useState('scandinavian');
-  const [enableLiveCrawl, setEnableLiveCrawl] = useState(true);
   const [prompt, setPrompt] = useState(
-    'modern_interior, luxury Scandinavian living room with light oak furniture, minimalist decor, neutral linen couch, 8k photo'
+    'Scandinavian living room with light oak coffee table, neutral linen sofa, olive green accents, and warm 2700K ambient lighting'
   );
 
   const [isLoading, setIsLoading] = useState(false);
@@ -47,11 +46,11 @@ export default function App() {
     }
 
     setIsLoading(true);
-    setLoadingStage('Analyzing Room Geometry & Depths...');
+    setLoadingStage('Analyzing Room Geometry & Ergonomics...');
 
     const stages = [
-      'Analyzing Room Geometry & Clearances...',
-      'Crawling Live Amazon & Flipkart Catalog...',
+      'Analyzing Room Geometry & Ergonomics...',
+      'Matching Verified Furniture to Your Custom Prompt...',
       'Synthesizing Architectural Conditioning...',
       'Rendering Photorealistic Visuals on ZeroGPU...',
       'Compositing Exact Product Packshots...'
@@ -72,7 +71,6 @@ export default function App() {
     formData.append('room_length', length.toString());
     formData.append('room_width', width.toString());
     formData.append('room_height', height.toString());
-    formData.append('enable_live_crawl', enableLiveCrawl ? 'true' : 'false');
 
     try {
       const response = await fetch('/api/redesign_agentic', {
@@ -146,8 +144,6 @@ export default function App() {
             setHeight={setHeight}
             selectedStyle={selectedStyle}
             setSelectedStyle={setSelectedStyle}
-            enableLiveCrawl={enableLiveCrawl}
-            setEnableLiveCrawl={setEnableLiveCrawl}
             prompt={prompt}
             setPrompt={setPrompt}
             isLoading={isLoading}

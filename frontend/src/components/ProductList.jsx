@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingBag, ExternalLink, ShieldCheck, Ruler, Palette, Shapes, Zap } from 'lucide-react';
+import { ShoppingBag, ExternalLink, ShieldCheck, Ruler, Palette, Shapes } from 'lucide-react';
 
 export default function ProductList({
   products = [],
@@ -46,13 +46,6 @@ export default function ProductList({
                   loading="lazy"
                 />
                 <span className={`store-badge store-${storeLower}`}>{prod.store}</span>
-                {prod.is_live_crawled && (
-                  <span className="live-scraped-pill">
-                    <span className="live-pulse"></span>
-                    <Zap size={10} />
-                    Live Scraped
-                  </span>
-                )}
                 <span className="card-pin-idx">{idx + 1}</span>
               </div>
 

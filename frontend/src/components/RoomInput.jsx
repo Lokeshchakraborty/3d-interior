@@ -1,12 +1,12 @@
 import React, { useRef } from 'react';
-import { Upload, X, Sliders, CheckCircle2, Zap, ArrowRight, Loader2, Sparkles } from 'lucide-react';
+import { Upload, X, Sliders, CheckCircle2, ArrowRight, Loader2, Sparkles, Wand2 } from 'lucide-react';
 
 const STYLES = [
-  { id: 'scandinavian', name: 'Scandinavian', color: '#10b981', prompt: 'modern_interior, luxury Scandinavian living room with light oak furniture, minimalist decor, neutral linen couch, 8k photo' },
-  { id: 'japandi', name: 'Japandi', color: '#f59e0b', prompt: 'modern_interior, luxury Japandi living room, clean wabi-sabi aesthetics, low profile furniture, warm ambient light, 8k' },
-  { id: 'modern_luxury', name: 'Modern Luxury', color: '#3b82f6', prompt: 'modern_interior, modern luxury penthouse living room, marble accents, velvet sectional sofa, brushed gold lighting, 8k' },
-  { id: 'bohemian', name: 'Bohemian', color: '#f43f5e', prompt: 'modern_interior, cozy bohemian living room, textured woven rugs, rattan cane furniture, earthy terracotta tones, 8k' },
-  { id: 'industrial', name: 'Industrial Loft', color: '#8b5cf6', prompt: 'modern_interior, urban industrial loft, exposed brick wall, matte black steel, distressed cognac leather sofa, 8k' }
+  { id: 'scandinavian', name: 'Scandinavian', color: '#10b981', prompt: 'Scandinavian living room with light oak furniture, minimalist decor, neutral linen couch, warm ambient lighting, 8k photo' },
+  { id: 'japandi', name: 'Japandi', color: '#f59e0b', prompt: 'Japandi living room, clean wabi-sabi aesthetics, low profile wood furniture, paper lantern lamp, warm ambient light, 8k' },
+  { id: 'modern_luxury', name: 'Modern Luxury', color: '#3b82f6', prompt: 'Modern luxury living room, marble coffee table, emerald velvet sofa, brushed gold lighting, high-end editorial, 8k' },
+  { id: 'bohemian', name: 'Bohemian', color: '#f43f5e', prompt: 'Cozy bohemian living room, textured Moroccan shag rug, rattan cane sofa, terracotta rust tones, lush indoor plants, 8k' },
+  { id: 'industrial', name: 'Industrial Loft', color: '#8b5cf6', prompt: 'Urban industrial loft, exposed brick wall, matte black steel, distressed cognac leather sofa, vintage Edison lighting, 8k' }
 ];
 
 const PRESETS = [
@@ -28,8 +28,6 @@ export default function RoomInput({
   setHeight,
   selectedStyle,
   setSelectedStyle,
-  enableLiveCrawl,
-  setEnableLiveCrawl,
   prompt,
   setPrompt,
   isLoading,
@@ -221,28 +219,55 @@ export default function RoomInput({
           </div>
         </div>
 
-        {/* 4. Live Playwright Crawler Toggle */}
-        <div className="crawler-card">
-          <div className="crawler-left">
-            <div className="crawler-icon-wrap">
-              <Zap size={18} className="text-amber-400" />
-            </div>
-            <div>
-              <div className="crawler-title-row">
-                <span className="crawler-heading">Simultaneous Playwright Crawler</span>
-                <span className="crawler-tag">Amazon & Flipkart</span>
-              </div>
-              <p className="crawler-sub">Concurrently browses live storefronts to scrape real-time prices & product packshots.</p>
-            </div>
+        {/* 4. Custom Design Prompt Feature (Define What You Want) */}
+        <div className="control-group">
+          <div className="label-row">
+            <label className="control-label">
+              <span>4. Custom Design Prompt</span>
+              <span className="precision-pill">What You Want</span>
+            </label>
+            <span className="unit-pill">Personalized Vision</span>
           </div>
-          <label className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={enableLiveCrawl}
-              onChange={(e) => setEnableLiveCrawl(e.target.checked)}
+          <p className="control-hint">
+            Define colors, materials, furniture items, or mood. The AI will curate matching verified furniture and render your vision:
+          </p>
+
+          <div className="prompt-box-wrap">
+            <textarea
+              className="prompt-textarea"
+              rows={3}
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="e.g. Scandinavian living room with light oak coffee table, neutral linen couch, olive green cushions, indoor plants, and warm 2700K ambient lighting..."
             />
-            <span className="toggle-slider"></span>
-          </label>
+          </div>
+
+          {/* Quick-Add Suggestion Chips */}
+          <div className="prompt-chips-row">
+            <span className="chips-title">Quick Add:</span>
+            {[
+              '🌿 Indoor Plants',
+              '🕯️ Warm 2700K Lighting',
+              '🪵 Natural Oak Wood',
+              '✨ Brass Accents',
+              '🛋️ Velvet Cushions',
+              '📚 Reading Nook'
+            ].map((chip) => (
+              <button
+                key={chip}
+                type="button"
+                className="prompt-chip-btn"
+                onClick={() => {
+                  const clean = chip.replace(/^[^\w\s]+\s*/, '');
+                  if (!prompt.toLowerCase().includes(clean.toLowerCase())) {
+                    setPrompt((prev) => (prev ? `${prev.trim()}, with ${clean}` : clean));
+                  }
+                }}
+              >
+                {chip}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* 5. Submit Action */}

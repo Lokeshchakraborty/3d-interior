@@ -84,64 +84,24 @@ def spatial_perception_node(state: RedesignState) -> Dict[str, Any]:
 
 def catalog_curation_node(state: RedesignState) -> Dict[str, Any]:
     """
-    Node 2: Curates real B2C products using fast simultaneous Playwright live crawling on Amazon & Flipkart
-    alongside dimension-verified catalog matching and budget guardrails.
+    Node 2: Curates real, dimension-verified B2C products from Amazon, Flipkart, and IKEA
+    aligned with spatial zone boundaries, user prompt keyword matching, and Visual RAG harmony.
     """
     style = state["preferred_style"] or "scandinavian"
     spatial_zones = state["spatial_plan"].get("zones", {})
-    enable_live = state.get("enable_live_crawl", True)
     max_budget = state.get("max_budget_inr")
+    user_prompt = state.get("user_prompt")
 
-    curated = []
-
-    # 1. Fast Simultaneous Live Playwright Crawl across Amazon & Flipkart
-    if enable_live:
-        print("[LangGraph: Node 2] Launching fast single-browser Playwright crawl on Amazon India & Flipkart...")
-        try:
-            def run_simultaneous_crawl():
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                items = loop.run_until_complete(
-                    live_crawler.crawl_both_simultaneous(style=style, category="coffee_table", limit_each=2)
-                )
-                loop.close()
-                return items
-
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-                live_items = executor.submit(run_simultaneous_crawl).result(timeout=18)
-
-            if live_items:
-                from embedding_service import embedding_service
-                for item in live_items:
-                    item["is_live_crawled"] = True
-                    try:
-                        harm = embedding_service.calculate_aesthetic_harmony(
-                            state.get("image_bytes"),
-                            item.get("image_url")
-                        )
-                        item["aesthetic_harmony"] = harm
-                        item["visual_similarity_score"] = harm["harmony_score_pct"]
-                    except Exception as emb_e:
-                        item["visual_similarity_score"] = 89.5
-                    curated.append(item)
-                print(f"[LangGraph: Node 2] Successfully injected {len(live_items)} LIVE crawled products from Amazon & Flipkart into design!")
-        except Exception as crawl_err:
-            print(f"[LangGraph: Node 2] Live crawl fallback notice: {crawl_err}")
-
-    # 2. Fill remaining spatial zones with verified catalog products using Visual RAG
-    base_curated = catalog_service.curate_room_products(
+    print(f"[LangGraph: Node 2] Curating verified B2C catalog products (Style: {style}, Prompt matching active)...")
+    curated = catalog_service.curate_room_products(
         style=style,
         spatial_zones=spatial_zones,
         max_budget_inr=max_budget,
-        room_image=state.get("image_bytes")
+        room_image=state.get("image_bytes"),
+        user_prompt=user_prompt
     )
 
-    crawled_categories = {p.get("category") for p in curated}
-    for base_p in base_curated:
-        if base_p.get("category") not in crawled_categories:
-            curated.append(base_p)
-
-    # 3. Budget Guardrail: filter if maximum budget is specified
+    # Budget Guardrail: filter if maximum budget is specified
     if max_budget and max_budget > 0:
         budget_total = 0
         budget_curated = []
@@ -158,9 +118,9 @@ def catalog_curation_node(state: RedesignState) -> Dict[str, Any]:
 def prompt_synthesis_node(state: RedesignState) -> Dict[str, Any]:
     """
     Node 3: Synthesizes high-efficiency conditioned architectural prompt enforcing
-    camera optics, circulation corridors, exact product attributes, and anti-hallucination guardrails.
+    user design desires, camera optics, circulation corridors, exact product attributes, and anti-hallucination guardrails.
     """
-    print("[LangGraph: Node 3] Synthesizing Multi-Tier Architectural Prompt with Guardrails...")
+    print("[LangGraph: Node 3] Synthesizing Multi-Tier Architectural Prompt with User Vision & Guardrails...")
     trigger = "modern_interior"
     style = state["preferred_style"]
     style_title = style.replace("_", " ").title()
@@ -172,14 +132,22 @@ def prompt_synthesis_node(state: RedesignState) -> Dict[str, Any]:
     l = dims.get("length_ft")
     h = dims.get("ceiling_height_ft")
 
-    # Tier 1: Metric Proportions & Circulation Clearance Guardrail
+    # Tier 1: User Custom Prompt Vision
+    user_prompt = (state.get("user_prompt") or "").strip()
+    user_vision = user_prompt
+    for noise in ["modern_interior,", "modern_interior", "8k photo", "photorealistic", "8k"]:
+        user_vision = re.sub(rf"\b{noise}\b", "", user_vision, flags=re.IGNORECASE)
+    user_vision = " ".join(user_vision.split()).strip().strip(",")
+    user_segment = f"{user_vision}, " if user_vision else ""
+
+    # Tier 2: Metric Proportions & Circulation Clearance Guardrail
     dim_guardrail = ""
     if w and l and h:
         dim_guardrail = f"architecturally proportioned for {l}ft length by {w}ft width with {h}ft high ceilings, strict 32-inch open walkway clearance corridor, clean negative floor space, "
     elif w and l:
         dim_guardrail = f"architecturally proportioned for {l}ft by {w}ft floor plan with 32-inch circulation clearance, "
 
-    # Tier 2: Product Visual Attributions
+    # Tier 3: Product Visual Attributions
     product_descriptors = []
     for p in state["curated_products"]:
         desc = p.get("visual_description", "")
@@ -198,16 +166,16 @@ def prompt_synthesis_node(state: RedesignState) -> Dict[str, Any]:
 
     products_str = ", ".join(product_descriptors) if product_descriptors else "harmonious minimalist furniture layout"
 
-    # Tier 3: Lighting & Ambient Photometry
+    # Tier 4: Lighting & Ambient Photometry
     light_source = spatial_plan.get("natural_light_source", "window").replace("_", " ")
     lighting_guardrail = f"diffuse natural daylight cascading from {light_source}, warm 3000K ambient mood lighting, soft raytraced ambient occlusion contact shadows on floor"
 
-    # Tier 4: Photographic Framing & Anti-Hallucination Guardrails
+    # Tier 5: Photographic Framing & Anti-Hallucination Guardrails
     framing_guardrail = "shot on Hasselblad H6D-100c with 24mm f/8 architectural tilt-shift lens, eye-level camera height at 1.4m, straight parallel vertical walls, zero perspective distortion"
     quality_guardrail = "Architectural Digest cover editorial, photorealistic textures, 8k resolution, crisp craftsmanship, no floating furniture, no overlapping objects, perfectly grounded floor contact"
 
     prompt = (
-        f"{trigger}, {style_title} {room_type}, {dim_guardrail}"
+        f"{trigger}, {user_segment}{style_title} {room_type}, {dim_guardrail}"
         f"featuring {products_str}. "
         f"{lighting_guardrail}, {framing_guardrail}, {quality_guardrail}"
     )

@@ -72,7 +72,8 @@ Unlike conventional generative interior apps that hallucinate random, unpurchasa
 
 - **Modern React & Three.js 3D WebGL Frontend (`frontend/`)**: Modular, clean, and functional React UI built with Vite, Lucide icons, and an interactive Three.js 3D WebGL stager supporting OrbitControls, directional lighting, soft shadow planes, model drag-and-drop across the floor plan, 45° rotation, and synchronized hover pins.
 - **LangGraph StateGraph v1.2**: 5-node autonomous pipeline with conditional state routing and error fallbacks.
-- **Simultaneous Playwright Crawler**: Live, concurrent headless browser navigation across **Amazon India** and **Flipkart** to extract real-time prices, specifications, and packshots.
+- **Custom Design Prompt & Vision**: Multi-line editable prompt with quick-add enhancement chips (`🌿 Indoor Plants`, `🕯️ Warm Lighting`, `🪵 Solid Oak`, `✨ Brass Accents`) that semantically drives both furniture selection and ZeroGPU visual generation.
+- **50+ Real B2C Furniture Catalog**: Over 50 verified products from Amazon India, Flipkart, and IKEA with exact metric dimensions, shapes, colors, and direct buy links.
 - **Ground-Truth Dimensional Calibration**: Input room Length, Width, and Ceiling Height (ft) to eliminate scale hallucinations and preserve 32" circulation walkways.
 - **Exact Product Perspective Compositing**: Projects real e-commerce packshots directly into the redesigned floor zone with realistic elliptical ambient drop-shadows.
 - **Shape & Color Precision**: Every product explicitly defines geometric shape (rectangular, curved cantilever, etc.) and color palette.
