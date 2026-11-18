@@ -9,19 +9,19 @@ export default function VisualStage({
   setHoveredProductId,
   onSelectProduct
 }) {
-  // Default to 'matched' (Virtual Staging on user's real room with 100% structure preserved)
-  const [activeTab, setActiveTab] = useState('matched');
+  // Default to 'after' (AI Concept Ambiance placed first)
+  const [activeTab, setActiveTab] = useState('after');
 
   const matchedUrl = data?.matched_image_url;
   const afterUrl = data?.image_url;
   const products = data?.products || [];
 
   const handleDownload = () => {
-    const src = activeTab === 'after' ? (afterUrl || matchedUrl) : (matchedUrl || afterUrl || beforeImage);
+    const src = activeTab === 'matched' ? (matchedUrl || beforeImage) : (afterUrl || matchedUrl || beforeImage);
     if (!src) return;
     const a = document.createElement('a');
     a.href = src;
-    a.download = `room_staging_${activeTab}_${Date.now()}.jpg`;
+    a.download = `room_${activeTab}_${Date.now()}.jpg`;
     a.click();
   };
 
@@ -63,10 +63,20 @@ export default function VisualStage({
 
   return (
     <div className="visual-stage-card">
-      {/* View Switcher Tabs Header: Real Room Virtual Staging First & Default */}
+      {/* View Switcher Tabs Header: AI Concept Ambiance First & Default */}
       <div className="stage-header">
         <div className="tab-pill-group">
-          {/* 1. Virtual Staging (Your Real Room - 100% Structural Preservation) */}
+          {/* 1. AI Concept Ambiance (Default & First) */}
+          <button
+            type="button"
+            className={`tab-pill ${activeTab === 'after' ? 'active' : ''}`}
+            onClick={() => setActiveTab('after')}
+          >
+            <Sparkles size={14} className="text-amber-400" />
+            <span>AI Concept Ambiance</span>
+          </button>
+
+          {/* 2. Virtual Staging (Real Room - 100% Architecture Preserved) */}
           <button
             type="button"
             className={`tab-pill ${activeTab === 'matched' ? 'active' : ''}`}
@@ -74,16 +84,6 @@ export default function VisualStage({
           >
             <Target size={14} className="text-cyan-400" />
             <span>Virtual Staging (Real Room)</span>
-          </button>
-
-          {/* 2. Side-by-Side (Before & After) */}
-          <button
-            type="button"
-            className={`tab-pill ${activeTab === 'split' ? 'active' : ''}`}
-            onClick={() => setActiveTab('split')}
-          >
-            <Columns size={14} className="text-sky-400" />
-            <span>Before & After</span>
           </button>
 
           {/* 3. 3D WebGL Stager */}
@@ -96,14 +96,14 @@ export default function VisualStage({
             <span>3D WebGL Stager</span>
           </button>
 
-          {/* 4. AI Concept Ambiance (Generative Re-imagination) */}
+          {/* 4. Side-by-Side (Before & After) */}
           <button
             type="button"
-            className={`tab-pill ${activeTab === 'after' ? 'active' : ''}`}
-            onClick={() => setActiveTab('after')}
+            className={`tab-pill ${activeTab === 'split' ? 'active' : ''}`}
+            onClick={() => setActiveTab('split')}
           >
-            <Sparkles size={14} className="text-amber-400" />
-            <span>AI Concept Ambiance</span>
+            <Columns size={14} className="text-sky-400" />
+            <span>Before & After</span>
           </button>
         </div>
 
@@ -119,27 +119,24 @@ export default function VisualStage({
 
       {/* Main Visual Viewport (Uncropped & Fully Visible) */}
       <div className="visual-viewport" id="visual-viewport-container">
-        {/* 1. Real Room Virtual Staging (First & Default: Zero Hallucination) */}
+        {/* 1. AI Diffusion Ambiance View (First & Default) */}
+        {activeTab === 'after' && (
+          <div className="image-viewport">
+            <img src={afterUrl || matchedUrl} alt="AI Concept Ambiance" className="stage-image" />
+            {renderHotspots()}
+            <div className="viewport-badge badge-diffusion">
+              {data?.zerogpu_notice ? 'ZeroGPU Notice · Generative Fallback' : 'FLUX AI Concept Ambiance'}
+            </div>
+          </div>
+        )}
+
+        {/* 2. Real Room Virtual Staging (Zero Hallucination) */}
         {activeTab === 'matched' && (
           <div className="image-viewport">
             <img src={matchedUrl || beforeImage} alt="Virtual Staging Your Real Room" className="stage-image" />
             {renderHotspots()}
             <div className="viewport-badge badge-matched">
               Your Real Room · 100% Architecture Preserved
-            </div>
-          </div>
-        )}
-
-        {/* 2. Side-by-Side Split View */}
-        {activeTab === 'split' && (
-          <div className="split-viewport">
-            <div className="split-half">
-              <span className="split-tag">Before (Empty Room)</span>
-              <img src={beforeImage} alt="Before" className="split-img" />
-            </div>
-            <div className="split-half">
-              <span className="split-tag">After (Furnished Real Room)</span>
-              <img src={matchedUrl || beforeImage} alt="Furnished Real Room" className="split-img" />
             </div>
           </div>
         )}
@@ -153,13 +150,16 @@ export default function VisualStage({
           />
         )}
 
-        {/* 4. AI Diffusion Ambiance View (Generative Re-imagination) */}
-        {activeTab === 'after' && (
-          <div className="image-viewport">
-            <img src={afterUrl || matchedUrl} alt="AI Diffusion Concept Ambiance" className="stage-image" />
-            {renderHotspots()}
-            <div className="viewport-badge badge-diffusion">
-              {data?.zerogpu_notice ? 'ZeroGPU Notice · Generative Concept Fallback' : 'Generative AI Concept · Re-imagined Ambiance'}
+        {/* 4. Side-by-Side Split View */}
+        {activeTab === 'split' && (
+          <div className="split-viewport">
+            <div className="split-half">
+              <span className="split-tag">Before (Empty Room)</span>
+              <img src={beforeImage} alt="Before" className="split-img" />
+            </div>
+            <div className="split-half">
+              <span className="split-tag">After (Furnished Real Room)</span>
+              <img src={matchedUrl || beforeImage} alt="Furnished Real Room" className="split-img" />
             </div>
           </div>
         )}
